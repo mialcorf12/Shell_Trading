@@ -21,6 +21,11 @@ export CLAUDE_MODEL=...             # opcional, por defecto claude-sonnet-4-5
 python3 server.py                   # http://127.0.0.1:5000
 ```
 
+## Error con el puerto del servidor
+```bash
+flask --app server run --debug --port 5001
+```
+
 ## Tests
 
 ```bash
