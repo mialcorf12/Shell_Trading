@@ -14,15 +14,17 @@ Persona for every LLM call and agent task: Jira/trading_agent_persona.md.
 - S9: "En python quiero que armes una interfaz web".
 
 ## Tasks
-- T1 (S1, S9): scaffold app/ (requirements.txt, app/server.py, package app/ideas_core) and folders Ideas/Draft, Ideas, Estrategias. route: inline. commit: -
-- T2 (S2, S3, S4): core: list files per folder, strategy name from file name, read/write `## Referencias` section. route: inline, TDD. commit: -
-- T3 (S2, S4, S7): core: move draft -> Ideas with new name <STRATEGY>_<NN>.md and bidirectional references; create strategy file; move between folders. route: inline, TDD. commit: -
-- T4 (S5): Flask routes: GET /api/tree, POST /api/move, POST /api/strategy. route: inline, TDD. commit: -
-- T5 (S6): UI page with Cytoscape mindmap + folder panels with move buttons. route: inline. commit: -
-- T6 (S7, S8): POST /api/clean/<draft>: Claude API call with persona as system prompt, LLM client injectable for tests. route: inline, TDD. commit: -
-- T7: README in app/ with run instructions and env vars (ANTHROPIC_API_KEY, CLAUDE_MODEL). route: inline. commit: -
+- T1 (S1, S9): scaffold app/ and folders Ideas/Draft, Ideas, Estrategias. route: inline. commit: e0a4c03
+- T2 (S2, S3, S4): core: list files per folder, strategy name from file name, read/write `## Referencias` section. route: inline, TDD. commit: e0a4c03
+- T3 (S2, S4, S7): core: move draft -> Ideas with new name <STRATEGY>_<NN>.md and bidirectional references; create strategy file. route: inline, TDD. commit: e0a4c03
+- T4 (S5): Flask routes: GET /api/tree, POST /api/promote, POST /api/strategy. route: inline, TDD. commit: 04d68a2
+- T5 (S6): UI page with Cytoscape mindmap + folder panels. route: inline. commit: 04d68a2 (browser check pending)
+- T6 (S7, S8): POST /api/clean/<draft>: Claude API call with persona as system prompt, LLM client injectable for tests. route: inline, TDD. commit: 04d68a2 (browser check pending)
+- T7: README in app/ with run instructions and env vars (ANTHROPIC_API_KEY, CLAUDE_MODEL). route: inline. commit: 04d68a2
 
 ## Log
 - L1 (original request, verbatim): "vamos a trabajar /Jira/User_Story.md" (story text is the Specs S1-S9 above, quoted from Jira/User_Story.md).
 - L2: user answers: cleanup button uses the Claude API; web stack Flask + JS vanilla.
 - L3: interpretation: the cleaned draft moves out of Ideas/Draft to Ideas (its improved version), so Draft stays clean. Model id comes from env CLAUDE_MODEL (default set in code, to be confirmed by user).
+- L4: verification: 31/31 pytest; app serves / and /api/tree (200); app.js syntax OK. NOT verified: the mindmap and cleanup button in a real browser.
+- L5: slice size: 772 authored lines in 2 commits (e0a4c03, 04d68a2), above the ~400-line slice; delivery shape left to the user.
