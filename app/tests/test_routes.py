@@ -92,3 +92,15 @@ def test_clean_endpoint_maps_llm_failure_to_502(tmp_path):
     res = app.test_client().post("/api/clean", json={"draft": "fvg.md", "strategy": "FVG"})
     assert res.status_code == 502
     assert (tmp_path / "Ideas/Draft/fvg.md").exists()
+
+
+def test_default_port_is_5001():
+    import server
+
+    assert server.DEFAULT_PORT == 5001
+
+
+def test_app_url_points_to_default_port():
+    import server
+
+    assert server.app_url() == "http://127.0.0.1:5001/"

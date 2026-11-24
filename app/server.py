@@ -1,7 +1,10 @@
 """Flask web app to manage Ideas/Draft, Ideas and Estrategias."""
 from __future__ import annotations
 
+import os
 import re
+import threading
+import webbrowser
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
@@ -9,6 +12,7 @@ from flask import Flask, jsonify, render_template, request
 from ideas_core import cleanup, store
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_PORT = 5001
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9_\- ]+$")
 
 
@@ -86,5 +90,13 @@ def create_app(root: Path = REPO_ROOT, llm_client=None) -> Flask:
     return app
 
 
+def app_url(port: int = DEFAULT_PORT) -> str:
+    return f"http://127.0.0.1:{port}/"
+
+
 if __name__ == "__main__":
-    create_app().run(debug=True)
+    # debug=True restarts this script in a child process; open the browser only
+    # from the parent so it opens once.
+    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        threading.Timer(1.0, webbrowser.open, args=[app_url()]).start()
+    create_app().run(debug=True, port=DEFAULT_PORT)

@@ -1,0 +1,89 @@
+import pytest
+
+from ideas_core import reels
+
+HEADER = "# Reels\n\nRegla de procesamiento:\n1. algo\n\n"
+
+U1 = "https://www.instagram.com/reels/Df0_n4OOEHB/"
+U2 = "https://www.instagram.com/reels/DfAmobOMBgE/"
+U3 = "https://www.instagram.com/reels/ZZZ000/"
+
+
+def make(new, done):
+    body = "## A) Links nuevos\n\n"
+    body += "\n".join(f"- {u}" for u in new) + "\n\n" if new else "(vacío)\n\n"
+    body += "## B) Links procesados\n\n"
+    body += "\n".join(f"- {u} → {idea}" for u, idea in done.items()) + "\n"
+    return HEADER + body
+
+
+def test_parse_reads_both_sections(tmp_path):
+    text = make([U3], {U1: "VOLUMEN_RUPTURA_01.md"})
+    new, done = reels.parse(text)
+    assert new == [U3]
+    assert done == {U1: "VOLUMEN_RUPTURA_01.md"}
+
+
+def test_parse_empty_section_is_placeholder(tmp_path):
+    new, done = reels.parse(make([], {U1: "X.md"}))
+    assert new == []
+
+
+def test_check_drops_new_links_already_processed():
+    new, done = [U1, U3], {U1: "VOLUMEN_RUPTURA_01.md"}
+    pending, removed, _ = reels.check(new, done, {})
+    assert pending == [U3]
+    assert removed == [U1]
+
+
+def test_check_keeps_unprocessed_links():
+    pending, removed, _ = reels.check([U3], {U1: "X.md"}, {})
+    assert pending == [U3]
+    assert removed == []
+
+
+def test_check_removes_duplicates_inside_new_section():
+    pending, removed, _ = reels.check([U3, U3], {}, {})
+    assert pending == [U3]
+
+
+def test_mark_done_moves_link_from_new_to_processed_sorted():
+    new, done = [U3], {U1: "VOLUMEN_RUPTURA_01.md"}
+    new, done = reels.mark_done(new, done, U3, "NUEVA_01.md")
+    assert new == []
+    assert done[U3] == "NUEVA_01.md"
+    assert list(done.keys()) == sorted(done.keys())
+
+
+def test_mark_done_rejects_link_already_processed():
+    with pytest.raises(ValueError):
+        reels.mark_done([], {U1: "X.md"}, U1, "Y.md")
+
+
+def test_render_roundtrip_keeps_header_and_sorts():
+    done = {U2: "FVG_01.md", U1: "VOLUMEN_RUPTURA_01.md"}
+    text = reels.render(HEADER, [], done)
+    assert text.startswith(HEADER)
+    assert text.index(U1) < text.index(U2)  # alphabetical by URL
+    assert "(vacío)" in text.split("## B)")[0]
+    assert reels.parse(text) == ([], done)
+
+
+def test_render_keeps_new_section_sorted():
+    text = reels.render(HEADER, [U3, U2], {})
+    assert text.index(U2) < text.index(U3)
+
+
+def test_parse_accepts_bare_urls_in_new_section():
+    text = HEADER + "## A) Links nuevos\n\n" + U3 + "\n" + U2 + "\n\n## B) Links procesados\n\n- " + U1 + " → X.md\n"
+    new, done = reels.parse(text)
+    assert new == [U3, U2]
+    assert done == {U1: "X.md"}
+
+
+def test_check_never_drops_bare_urls_that_are_not_processed(tmp_path):
+    path = tmp_path / "reels.md"
+    path.write_text(HEADER + "## A) Links nuevos\n\n" + U3 + "\n\n## B) Links procesados\n\n", encoding="utf-8")
+    result = reels.run_check(path)
+    assert result["pending"] == [U3]
+    assert U3 in path.read_text(encoding="utf-8")
