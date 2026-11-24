@@ -1,0 +1,4 @@
+# VWAP_VS_EMA_BOLLINGER
+
+## Referencias
+- Ideas: [[VWAP_VS_EMA_BOLLINGER_01]]

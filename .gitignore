@@ -3,6 +3,4 @@ __pycache__
 .atl
 .pytest_cache
 .gitkeep
-/Estrategias
-/Ideas
-/Jira/cookies.txt
+/jira/cookies.txt
