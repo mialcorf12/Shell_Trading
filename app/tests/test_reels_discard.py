@@ -85,3 +85,11 @@ def test_mark_discarded_keeps_ideas_file_untouched(tmp_path):
     path = write_file(tmp_path, [], {U2: "FVG_01.md"}, {})
     reels.run_discard(path, U2, "promo")
     assert ideas.exists()
+
+
+def test_post_drafts_are_deletable_too(tmp_path):
+    draft = tmp_path / "post_Ddd43P8lD2j.md"
+    draft.write_text("x", encoding="utf-8")
+    path = write_file(tmp_path, [], {"https://www.instagram.com/p/Ddd43P8lD2j/": "post_Ddd43P8lD2j.md"}, {})
+    reels.run_discard(path, "https://www.instagram.com/p/Ddd43P8lD2j/", "carrusel")
+    assert not draft.exists()

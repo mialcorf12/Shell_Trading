@@ -115,8 +115,9 @@ def mark_discarded(new: list, done: dict, discarded: dict, url: str, reason: str
 
 
 def _draft_name(value: str) -> str:
-    """Only reel_*.md drafts count; promoted ideas (FVG_01.md) are never deleted."""
-    return value if value.startswith("reel_") and value.endswith(".md") else "-"
+    """Only reel_*.md and post_*.md drafts count; promoted ideas (FVG_01.md) are never deleted."""
+    is_draft = value.startswith(("reel_", "post_")) and value.endswith(".md")
+    return value if is_draft else "-"
 
 
 def delete_draft(folder: Path, name: str) -> bool:
