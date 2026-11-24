@@ -21,4 +21,6 @@ class ClaudeClient:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
+        if getattr(msg, "stop_reason", None) == "max_tokens":
+            raise RuntimeError("la respuesta de la IA se cortó por el límite de tokens; el borrador queda intacto")
         return "".join(block.text for block in msg.content if block.type == "text")

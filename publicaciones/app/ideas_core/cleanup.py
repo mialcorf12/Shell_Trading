@@ -20,6 +20,9 @@ def clean_draft(root: Path, draft_name: str, strategy: str, client, persona_path
     if not source.is_file():
         raise FileNotFoundError(str(source))
     rewritten = client.rewrite(system=persona, user=source.read_text(encoding="utf-8"))
+    # Validate BEFORE moving anything: an empty reply must leave the draft where it is.
+    if not isinstance(rewritten, str) or not rewritten.strip():
+        raise ValueError("la IA devolvió una respuesta vacía; el borrador queda intacto")
 
     target = store.promote_draft(root, draft_name, strategy)
     refs = store.read_references(target)

@@ -58,3 +58,21 @@ def test_missing_persona_fails_before_moving_draft(ws):
     with pytest.raises(FileNotFoundError):
         cleanup.clean_draft(ws, "fvg.md", "FVG", FakeClient(), persona_path=ws / "jira/trading_agent_persona.md")
     assert (ws / "ideas/draft/fvg.md").exists()
+
+
+def test_empty_llm_reply_keeps_draft_and_writes_nothing(ws):
+    import pytest as _pytest
+    with _pytest.raises(ValueError):
+        cleanup.clean_draft(ws, "fvg.md", "FVG", FakeClient(reply="   \n"),
+                            persona_path=ws / "Jira/trading_agent_persona.md")
+    assert (ws / "ideas/draft/fvg.md").exists()
+    assert not (ws / "ideas/FVG_01.md").exists()
+
+
+def test_none_llm_reply_keeps_draft_and_writes_nothing(ws):
+    import pytest as _pytest
+    with _pytest.raises(ValueError):
+        cleanup.clean_draft(ws, "fvg.md", "FVG", FakeClient(reply=None),
+                            persona_path=ws / "Jira/trading_agent_persona.md")
+    assert (ws / "ideas/draft/fvg.md").exists()
+    assert not (ws / "ideas/FVG_01.md").exists()

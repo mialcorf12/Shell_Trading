@@ -4,34 +4,63 @@
   <meta charset="utf-8">
   <title>Shell_Trading · Ideas y Estrategias</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; display: grid; grid-template-columns: 320px 1fr; height: 100vh; }
-    aside { padding: 12px; overflow: auto; border-right: 1px solid #ddd; }
-    #graph { width: 100%; height: 100%; }
-    h2 { font-size: 15px; margin: 12px 0 4px; }
-    li { font-size: 13px; margin: 3px 0; }
-    button { font-size: 12px; }
+    :root { --bg: #0d1117; --panel: #161b22; --line: #30363d; --text: #c9d1d9; --strong: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --buy: #238636; --buy-line: #2ea043; --ai: #1f6feb; --ai-line: #388bfd; }
+    body { font-family: system-ui, sans-serif; margin: 0; display: grid; grid-template-columns: 320px 1fr; height: 100vh; background: var(--bg); color: var(--text); }
+    aside { padding: 14px; overflow: auto; background: var(--panel); border-right: 1px solid var(--line); }
+    .brand { font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; font-size: 12px; color: var(--accent); margin: 0 0 10px; font-family: ui-monospace, Menlo, monospace; }
+    #graph { width: 100%; height: 100%; background: var(--bg); }
+    details { margin: 6px 0; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+    summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 6px 4px; color: var(--strong); border-radius: 4px; list-style-position: outside; }
+    summary:hover { background: #21262d; }
+    details[open] > summary { color: var(--accent); }
+    summary svg { vertical-align: -2px; margin-right: 6px; }
+    details > *:not(summary) { margin-left: 4px; }
+    .item-title { font-weight: 600; font-size: 13px; color: var(--strong); padding: 6px 4px; margin: 6px 0; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+    .info { display: inline-block; position: relative; width: 15px; height: 15px; border-radius: 50%; background: var(--line); color: var(--text); font-size: 11px; font-weight: 700; text-align: center; line-height: 15px; margin-left: 6px; cursor: help; }
+    .info:hover { background: var(--accent); color: var(--bg); }
+    .info .tip { display: none; position: absolute; left: 50%; transform: translateX(-50%); top: 22px; width: 250px; background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 8px 10px; border-radius: 6px; font-size: 11px; font-weight: 400; line-height: 1.4; z-index: 10; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+    .info:hover .tip { display: block; }
+    li { font-family: ui-monospace, Menlo, monospace; font-size: 12px; margin: 2px 0; padding: 2px 6px; border-radius: 4px; color: var(--text); }
+    li:hover { background: #21262d; }
+    select, input { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 5px; font-size: 12px; margin: 4px 0; }
+    button { font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: #21262d; color: var(--text); cursor: pointer; margin-top: 4px; }
+    button:hover { border-color: var(--accent); }
+    #promote { background: var(--buy); border-color: var(--buy-line); color: #fff; }
+    #clean { background: var(--ai); border-color: var(--ai-line); color: #fff; }
+    #status { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); min-height: 16px; margin-top: 10px; }
   </style>
 </head>
 <body>
   <aside>
-    <h2>ideas/draft (sin revisión)</h2>
-    <ul id="draft"></ul>
-    <h2>Ideas depuradas</h2>
-    <ul id="ideas"></ul>
-    <h2>Estrategias</h2>
-    <ul id="strategies"></ul>
-    <h2>Contexto (no operable)</h2>
-    <ul id="context"></ul>
-    <h2>Nueva estrategia</h2>
-    <input id="new-strategy" placeholder="ej. ORB_NY">
-    <button id="add-strategy">Crear</button>
-    <h2>Promover draft</h2>
-    <select id="promote-draft"></select>
-    <select id="promote-strategy"></select>
-    <button id="promote">Mover a Ideas</button>
-    <h2>Limpiar ideas/draft (IA)</h2>
-    <button id="clean">Limpiar draft seleccionado</button>
-    <p id="status" style="font-size:12px;color:#555"></p>
+    <div class="brand">Shell_Trading · Ideas</div>
+    <details>
+      <summary><svg viewBox="0 0 24 24" width="14" height="14"><polygon fill="#1f6feb" points="12,2 14.9,8.6 22,9.2 16.6,13.9 18.2,21 12,17.3 5.8,21 7.4,13.9 2,9.2 9.1,8.6"/></svg>Estrategias</summary>
+      <ul id="strategies"></ul>
+    </details>
+    <details>
+      <summary><svg viewBox="0 0 24 24" width="14" height="14"><polygon fill="#ff00ff" points="12,2 22,12 12,22 2,12"/></svg>Contexto (no operable)</summary>
+      <ul id="context"></ul>
+    </details>
+    <details>
+      <summary><svg viewBox="0 0 24 24" width="14" height="14"><path fill="#ffd33d" stroke="#333" stroke-width="0.9" d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/><rect fill="#555" x="9" y="18" width="6" height="2" rx="1"/><rect fill="#555" x="9.5" y="20.5" width="5" height="1.5" rx="0.7"/></svg>Ideas depuradas</summary>
+      <ul id="ideas"></ul>
+    </details>
+    <div class="item-title">Nueva idea<span class="info">i<span class="tip">Para agregar un link nuevo, escribilo en el archivo <b>publicaciones/ideas/draft/reels.md</b>, dentro de la sección <b>A) Links nuevos</b> y después correr <b>Limpiar ideas/draft (IA)</b>.</span></span></div>
+    <details>
+      <summary><svg viewBox="0 0 24 24" width="14" height="14"><path fill="#9aa0a6" stroke="#333" stroke-width="0.9" d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/><rect fill="#555" x="9" y="18" width="6" height="2" rx="1"/><rect fill="#555" x="9.5" y="20.5" width="5" height="1.5" rx="0.7"/></svg>ideas/draft (sin revisión)</summary>
+      <ul id="draft"></ul>
+    </details>
+    <details>
+      <summary>Limpiar ideas/draft (IA)<span class="info">i<span class="tip">Hace lo mismo que promover, pero antes reescribe el texto con Claude, usando el persona de jira/trading_agent_persona.md como instrucción del sistema. La respuesta reemplaza el cuerpo de la idea; el borrador original sale de ideas/draft/ solo si la respuesta tiene contenido. Si la API falla o la respuesta llega vacía, el borrador queda intacto. Requiere ANTHROPIC_API_KEY.</span></span></summary>
+      <button id="clean">Limpiar draft seleccionado</button>
+    </details>
+    <details>
+      <summary>Promover draft<span class="info">i<span class="tip">Tomás un borrador de ideas/draft/ y una estrategia del desplegable. El borrador se mueve tal cual a ideas/&lt;ESTRATEGIA&gt;_&lt;NN&gt;.md, con el siguiente número libre. Si la estrategia no existe, se crea en estrategias/. Se escriben las referencias en ambos sentidos. No usa IA: el texto no cambia.</span></span></summary>
+      <select id="promote-draft"></select>
+      <select id="promote-strategy"></select>
+      <button id="promote">Mover a Ideas</button>
+    </details>
+    <p id="status"></p>
   </aside>
   <div id="graph"></div>
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>

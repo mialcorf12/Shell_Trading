@@ -104,3 +104,10 @@ def test_app_url_points_to_default_port():
     import server
 
     assert server.app_url() == "http://127.0.0.1:5001/"
+
+
+def test_index_has_helptext_for_promote_and_clean(tmp_path):
+    app = create_app(tmp_path)
+    html = app.test_client().get("/").get_data(as_text=True)
+    assert "Tomás un borrador de ideas/draft/" in html
+    assert "Hace lo mismo que promover" in html
