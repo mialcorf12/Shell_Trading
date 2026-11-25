@@ -1,0 +1,564 @@
+//@version=6
+// Shell_Trading · Indicadores
+// Generado desde indicadores/indicadores.md. Grupos de entradas en el mismo orden:
+//   1. Indicadores  ·  3. Conceptos de estructura y niveles  ·  4. Indicadores de contexto
+// (la sección 2 del .md son referencias a estrategias, no indicadores).
+// Aproximaciones (Pine no tiene datos de tick ni letras TPO) están marcadas en los tooltips.
+indicator("Shell_Trading · Indicadores", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=200)
+
+// ---------- Tipos ----------
+type Zone
+    float top
+    float bot
+    bool bull
+    bool active
+
+// ---------- Grupos ----------
+string G1 = "1. Indicadores"
+string G3 = "3. Conceptos de estructura y niveles"
+string G4 = "4. Indicadores de contexto"
+string GV = "Visualización"
+bool showLineLabels = input.bool(true, "Etiquetas pequeñas al final de cada línea", group=GV)
+
+// ==================== 1. Indicadores ====================
+bool showBands = input.bool(false, "Bandas de desviación estándar del VWAP (±1σ, ±2σ, ±3σ)", group=G1,
+     tooltip="Bandas sobre el VWAP de sesión NY (ancla 09:30 ET), ponderadas por volumen.")
+bool showDelta = input.bool(true, "Delta (aproximación por vela)", group=G1,
+     tooltip="Pine no tiene delta real (agresión de mercado). Aproximación: volumen × (cierre − apertura) / rango. Delta anómalo: |delta| ≥ 2 × media.")
+int deltaLen = input.int(30, "Delta: velas de referencia", group=G1, minval=2)
+string delta5mMode = input.string("Vela 5m en curso", "Delta mejorado (5m): modo",
+     options=["Vela 5m en curso", "Ventana rodante (últimos 5 min)"], group=G1,
+     tooltip="Para operativa en 1m: 'Vela 5m en curso' acumula el delta de las velas de 1m del bloque de 5 minutos (resetea cada 5m, mostrando [X/5m]). 'Ventana rodante' suma continuamente los últimos 5 minutos.")
+bool showProfile = input.bool(true, "Perfil de volumen (POC, HVN, LVN, área de valor VAH/VAL)", group=G1,
+     tooltip="Perfil sobre las últimas N velas del gráfico. Área de valor = 70% del volumen. LVN = nivel con volumen ≤ 40% del máximo.")
+int pvLookback = input.int(60, "Perfil: velas", group=G1, minval=10, maxval=400)
+int pvBins = input.int(24, "Perfil: niveles (bins)", group=G1, minval=8, maxval=100)
+bool showTPO = input.bool(true, "TPO (single prints, aproximado)", group=G1,
+     tooltip="Aproximación: cuenta velas que tocan cada nivel. Un nivel tocado por una sola vela es un single print. No hay letras TPO.")
+bool showVolume = input.bool(true, "Volumen (VolRel = volumen / SMA(volumen, 20))", group=G1,
+     tooltip="Marca velas de iniciativa con VolRel > 1.5. Umbrales 0.8 / 1.2 / 1.5 propios de la estrategia VOLUMEN_RUPTURA.")
+bool showVwapNY = input.bool(true, "VWAP de apertura NY (ancla 09:30 ET)", group=G1)
+bool showVwapGlobex = input.bool(true, "VWAP diario Globex (ancla 18:00 ET)", group=G1,
+     tooltip="Sin datos de sesión extendida el ancla 18:00 puede no reproducirse. En temporalidades diarias no hay reinicio.")
+
+// ==================== 3. Conceptos de estructura y niveles ====================
+bool showBOS = input.bool(true, "BOS (Break of Structure)", group=G3,
+     tooltip="Cierre que supera el último swing a favor de la tendencia.")
+bool showCHoCH = input.bool(true, "CHoCH (Change of Character)", group=G3,
+     tooltip="Cierre que rompe el último swing en contra de la tendencia: cambio de sesgo.")
+bool showCRT = input.bool(true, "CRT (Candle Range Theory)", group=G3,
+     tooltip="Vela que barre el mínimo o máximo de la vela anterior y cierra de vuelta dentro de su rango.")
+bool showFVG = input.bool(true, "FVG (Fair Value Gap)", group=G3)
+bool showIFVG = input.bool(true, "iFVG (Inversion Fair Value Gap)", group=G3,
+     tooltip="Un FVG que el precio cierra del otro lado se invierte y pasa a ser iFVG.")
+bool showLiq = input.bool(false, "Liquidez (máximos / mínimos iguales)", group=G3)
+float eqTol = input.float(4.0, "Liquidez: tolerancia (pts)", group=G3, minval=0.25)
+bool showMSS = input.bool(true, "MSS (cambio de estructura)", group=G3,
+     tooltip="Cierre que rompe el último swing, en cualquier dirección.")
+bool showOB = input.bool(true, "Order block (OB)", group=G3,
+     tooltip="Última vela contraria en las 10 velas previas a un BOS.")
+bool showPDHPDL = input.bool(true, "PDH / PDL (día anterior)", group=G3)
+bool showSMT = input.bool(true, "SMT (divergencia NQ / ES)", group=G3,
+     tooltip="Requiere acceso a ES1! en TradingView.")
+int swingLen = input.int(3, "Swing: velas a cada lado", group=G3, minval=1)
+
+// ==================== 4. Indicadores de contexto ====================
+bool showEMA9 = input.bool(true, "EMA 9 (tendencia de corto plazo)", group=G4,
+     tooltip="Períodos de INDICADORES_TOP_7. El material fuente no define temporalidad.")
+bool showEMA21 = input.bool(true, "EMA 21 (entrada y salida)", group=G4)
+bool showEMA50 = input.bool(true, "EMA 50 (punto de stop)", group=G4)
+bool showEMA200 = input.bool(true, "EMA 200 (tendencia de largo plazo)", group=G4)
+bool showRSI = input.bool(true, "RSI (14) · niveles 70 / 30 · línea 50", group=G4)
+bool showADX = input.bool(true, "ADX (14) · umbrales 20 / 25", group=G4)
+bool showBB = input.bool(false, "Bandas de Bollinger (20, 2)", group=G4,
+     tooltip="Parámetros no definidos en el material fuente: valores por defecto de TradingView.")
+bool showMACD = input.bool(true, "MACD (12, 26, 9)", group=G4,
+     tooltip="Parámetros no definidos en el material fuente: valores por defecto de TradingView.")
+
+bool showAtr = input.bool(true, "ATR (14)", group=G4,
+     tooltip="Agregado por pedido; no está en indicadores.md. Se muestra en la tabla, no como línea (ver nota del script).")
+
+bool showORB = input.bool(true, "ORB NY 09:30-09:45 ET (máximo y mínimo)", group=G4,
+     tooltip="Líneas en el máximo y el mínimo de 09:30 a 09:45 ET (NY). Aparecen al cerrar el rango y vencen a las 17:00 ET.")
+bool showORBUK = input.bool(true, "ORB UK 01:00-01:15 ET (máximo y mínimo)", group=G4,
+     tooltip="Líneas en el máximo y el mínimo de 01:00 a 01:15 ET. Aparecen al cerrar el rango y vencen a las 06:00 ET.")
+
+// ==================== Cálculos ====================
+
+// ---- VWAP de apertura NY (09:30 ET) y Globex (18:00 ET), con bandas ----
+bool anchorNY = hour(time, "America/New_York") == 9 and minute(time, "America/New_York") == 30
+bool newNY = anchorNY and not anchorNY[1]
+var float pvNY = 0.0
+var float vNY = 0.0
+var float pv2NY = 0.0
+if newNY
+    pvNY := 0.0
+    vNY := 0.0
+    pv2NY := 0.0
+pvNY := pvNY + hlc3 * volume
+vNY := vNY + volume
+pv2NY := pv2NY + hlc3 * hlc3 * volume
+float vwapNY = vNY > 0 ? pvNY / vNY : na
+float sdNY = vNY > 0 ? math.sqrt(math.max(pv2NY / vNY - vwapNY * vwapNY, 0.0)) : na
+
+bool anchorGX = hour(time, "America/New_York") == 18 and minute(time, "America/New_York") == 0
+bool newGX = anchorGX and not anchorGX[1]
+var float pvGX = 0.0
+var float vGX = 0.0
+if newGX
+    pvGX := 0.0
+    vGX := 0.0
+pvGX := pvGX + hlc3 * volume
+vGX := vGX + volume
+float vwapGX = vGX > 0 ? pvGX / vGX : na
+
+// ---- Delta aproximado y volumen relativo ----
+float rng = high - low
+float deltaProxy = rng > 0 ? volume * (close - open) / rng : 0.0
+float deltaAbsAvg = ta.sma(math.abs(deltaProxy), deltaLen)
+bool deltaAnom = deltaAbsAvg > 0 and math.abs(deltaProxy) >= 2.0 * deltaAbsAvg
+float volSma = ta.sma(volume, 20)
+float volRel = volSma > 0 ? volume / volSma : na
+
+// ---- Delta mejorado (lógica 5m para operativa en 1m) ----
+bool isNew5m = ta.change(time("5")) != 0
+var float delta5m_bar = 0.0
+var int barsIn5m = 0
+if isNew5m
+    delta5m_bar := deltaProxy
+    barsIn5m := 1
+else
+    delta5m_bar += deltaProxy
+    barsIn5m += 1
+
+float delta5m_rolling = math.sum(deltaProxy, 5)
+float delta5mVal = delta5mMode == "Vela 5m en curso" ? delta5m_bar : delta5m_rolling
+float delta5mAvg = ta.sma(math.abs(delta5mVal), deltaLen)
+bool delta5mAnom = delta5mAvg > 0 and math.abs(delta5mVal) >= 2.0 * delta5mAvg
+
+// ---- Estructura: pivotes, BOS, CHoCH, MSS ----
+var float lastSH = na
+var float lastSL = na
+var int trend = 0
+float ph = ta.pivothigh(high, swingLen, swingLen)
+float pl = ta.pivotlow(low, swingLen, swingLen)
+bool brkUp = ta.crossover(close, lastSH)
+bool brkDn = ta.crossunder(close, lastSL)
+bool bosUp = brkUp and trend == 1
+bool bosDn = brkDn and trend == -1
+bool chochUp = brkUp and trend == -1
+bool chochDn = brkDn and trend == 1
+bool mssAny = brkUp or brkDn
+bool eqhNow = not na(ph) and not na(lastSH) and math.abs(ph - lastSH) <= eqTol
+bool eqlNow = not na(pl) and not na(lastSL) and math.abs(pl - lastSL) <= eqTol
+if brkUp
+    trend := 1
+if brkDn
+    trend := -1
+if not na(ph)
+    lastSH := ph
+if not na(pl)
+    lastSL := pl
+
+// ---- CRT: barrido de la vela anterior y cierre de vuelta dentro ----
+bool crtBull = low < low[1] and close > low[1] and close <= high[1]
+bool crtBear = high > high[1] and close < high[1] and close >= low[1]
+
+// ---- FVG e iFVG ----
+var array<Zone> zones = array.new<Zone>()
+bool ifvgBull = false
+bool ifvgBear = false
+if showIFVG
+    for z in zones
+        if z.active
+            if z.bull and close < z.bot
+                z.active := false
+                ifvgBear := true
+                box.new(bar_index - 15, z.top, bar_index + 15, z.bot, bgcolor=color.new(color.orange, 80), border_color=color.orange)
+            else
+                if not z.bull and close > z.top
+                    z.active := false
+                    ifvgBull := true
+                    box.new(bar_index - 15, z.top, bar_index + 15, z.bot, bgcolor=color.new(color.orange, 80), border_color=color.orange)
+bool bullFVG = low > high[2]
+bool bearFVG = high < low[2]
+if showFVG and bullFVG
+    array.push(zones, Zone.new(top=low, bot=high[2], bull=true, active=true))
+    box.new(bar_index - 2, low, bar_index + 15, high[2], bgcolor=color.new(color.green, 80), border_color=color.green)
+if showFVG and bearFVG
+    array.push(zones, Zone.new(top=low[2], bot=high, bull=false, active=true))
+    box.new(bar_index - 2, low[2], bar_index + 15, high, bgcolor=color.new(color.red, 80), border_color=color.red)
+if array.size(zones) > 60
+    array.shift(zones)
+
+// ---- Order block: última vela contraria en las 10 velas previas al BOS ----
+if showOB and bosUp
+    bool foundOB = false
+    float obTop = na
+    float obBot = na
+    for i = 1 to 10
+        if not foundOB and close[i] < open[i]
+            foundOB := true
+            obTop := high[i]
+            obBot := low[i]
+    if foundOB
+        box.new(bar_index - 10, obTop, bar_index + 10, obBot, bgcolor=color.new(color.blue, 80), border_color=color.blue)
+if showOB and bosDn
+    bool foundOBd = false
+    float obTopd = na
+    float obBotd = na
+    for i = 1 to 10
+        if not foundOBd and close[i] > open[i]
+            foundOBd := true
+            obTopd := high[i]
+            obBotd := low[i]
+    if foundOBd
+        box.new(bar_index - 10, obTopd, bar_index + 10, obBotd, bgcolor=color.new(color.purple, 80), border_color=color.purple)
+
+// ---- Liquidez: líneas en máximos / mínimos iguales ----
+if showLiq and eqhNow
+    line.new(bar_index - 2 * swingLen, ph, bar_index, ph, color=color.new(color.yellow, 0), width=1, extend=extend.right)
+if showLiq and eqlNow
+    line.new(bar_index - 2 * swingLen, pl, bar_index, pl, color=color.new(color.yellow, 0), width=1, extend=extend.right)
+
+// ---- PDH / PDL y SMT ----
+float pdh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+float pdl = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
+float esHigh = request.security("ES1!", timeframe.period, high)
+float esLow = request.security("ES1!", timeframe.period, low)
+bool nqHH = high > ta.highest(high[1], swingLen)
+bool esNoHH = esHigh <= ta.highest(esHigh[1], swingLen)
+bool nqLL = low < ta.lowest(low[1], swingLen)
+bool esNoLL = esLow >= ta.lowest(esLow[1], swingLen)
+bool smtBear = nqHH and esNoHH
+bool smtBull = nqLL and esNoLL
+
+// ---- Indicadores de contexto ----
+float rsiV = ta.rsi(close, 14)
+[diP, diM, adxV] = ta.dmi(14, 14)
+[macdL, macdS, macdH] = ta.macd(close, 12, 26, 9)
+[bbBasis, bbUp, bbLow] = ta.bb(close, 20, 2.0)
+float emaFast = ta.ema(close, 9)
+float emaMid = ta.ema(close, 21)
+float emaSlow = ta.ema(close, 50)
+float ema200 = ta.ema(close, 200)
+float atrV = ta.atr(14)
+float atrSma50 = ta.sma(atrV, 50)
+float atrRatio = atrSma50 > 0 ? atrV / atrSma50 : na
+
+// ---- Vencimientos: NY hasta 17:00 ET, UK hasta 06:00 ET ----
+bool gateNY = not na(time(timeframe.period, "0945-1700", "America/New_York"))
+bool gateUK = not na(time(timeframe.period, "0115-0600", "America/New_York"))
+
+// ---- ORB NY (09:30-09:45 ET) y ORB UK (01:00-01:15 ET): máximo y mínimo de cada rango ----
+// Se grafican como plot solo dentro de su ventana: así nacen en la vela de origen y vencen a 17:00 (NY) o 06:00 (UK).
+bool inORB = not na(time(timeframe.period, "0930-0945", "America/New_York"))
+bool startORB = inORB and not inORB[1]
+var float orbHi = na
+var float orbLo = na
+if startORB
+    orbHi := high
+    orbLo := low
+if inORB and not startORB
+    orbHi := math.max(orbHi, high)
+    orbLo := math.min(orbLo, low)
+bool inSessNY = not na(time(timeframe.period, "0930-1700", "America/New_York"))
+float orbNYhiPlot = showORB and inSessNY ? orbHi : na
+float orbNYloPlot = showORB and inSessNY ? orbLo : na
+
+bool inUK = not na(time(timeframe.period, "0100-0115", "America/New_York"))
+bool startUK = inUK and not inUK[1]
+var float ukHi = na
+var float ukLo = na
+if startUK
+    ukHi := high
+    ukLo := low
+if inUK and not startUK
+    ukHi := math.max(ukHi, high)
+    ukLo := math.min(ukLo, low)
+bool inSessUK = not na(time(timeframe.period, "0100-0600", "America/New_York"))
+float orbUKhiPlot = showORBUK and inSessUK ? ukHi : na
+float orbUKloPlot = showORBUK and inSessUK ? ukLo : na
+
+float pocLevel = na
+float vahLevel = na
+float valLevel = na
+// ---- Perfil de volumen y TPO aproximado (solo en la última vela) ----
+var array<line> pvLines = array.new<line>()
+string pocTxt = "—"
+string vahTxt = "—"
+string valTxt = "—"
+string lvnTxt = "—"
+string singlesTxt = "—"
+float hiP = ta.highest(high, pvLookback)
+float loP = ta.lowest(low, pvLookback)
+if barstate.islast and (showProfile or showTPO)
+    for ln in pvLines
+        line.delete(ln)
+    pvLines.clear()
+    float stepP = (hiP - loP) / pvBins
+    if stepP > 0
+        array<float> prof = array.new<float>(pvBins, 0.0)
+        array<int> touch = array.new<int>(pvBins, 0)
+        for k = 0 to pvLookback - 1
+            int i1 = math.max(0, math.min(pvBins - 1, int(math.floor((low[k] - loP) / stepP))))
+            int i2 = math.max(0, math.min(pvBins - 1, int(math.floor((high[k] - loP) / stepP))))
+            int nb = i2 - i1 + 1
+            float share = volume[k] / nb
+            for b = i1 to i2
+                prof.set(b, prof.get(b) + share)
+                touch.set(b, touch.get(b) + 1)
+        float total = array.sum(prof)
+        float maxVol = array.max(prof)
+        int poc = array.indexof(prof, maxVol)
+        int vaLo = poc
+        int vaHi = poc
+        float acc = prof.get(poc)
+        while acc < 0.7 * total and (vaLo > 0 or vaHi < pvBins - 1)
+            float below = vaLo > 0 ? prof.get(vaLo - 1) : -1.0
+            float above = vaHi < pvBins - 1 ? prof.get(vaHi + 1) : -1.0
+            if above >= below
+                vaHi := vaHi + 1
+                acc := acc + above
+            else
+                vaLo := vaLo - 1
+                acc := acc + below
+        float pocP = loP + stepP * (poc + 0.5)
+        float vahP = loP + stepP * (vaHi + 1)
+        float valP = loP + stepP * vaLo
+        int lvnCount = 0
+        int singles = 0
+        for b = 0 to pvBins - 1
+            if prof.get(b) > 0 and prof.get(b) <= 0.4 * maxVol
+                lvnCount := lvnCount + 1
+            if touch.get(b) == 1
+                singles := singles + 1
+        pocLevel := pocP
+        pocTxt := str.tostring(pocP, format.mintick)
+        vahLevel := vahP
+        vahTxt := str.tostring(vahP, format.mintick)
+        valLevel := valP
+        valTxt := str.tostring(valP, format.mintick)
+        lvnTxt := str.tostring(lvnCount) + " niveles"
+        singlesTxt := str.tostring(singles) + " (aprox.)"
+        if showProfile
+            pvLines.push(line.new(bar_index - pvLookback, pocP, bar_index, pocP, color=color.yellow, width=2, extend=extend.right))
+            pvLines.push(line.new(bar_index - pvLookback, vahP, bar_index, vahP, color=color.new(color.aqua, 0), width=1, extend=extend.right))
+            pvLines.push(line.new(bar_index - pvLookback, valP, bar_index, valP, color=color.new(color.aqua, 0), width=1, extend=extend.right))
+
+// ==================== Dibujo ====================
+
+// 1. VWAP y bandas
+plot(showVwapNY ? vwapNY : na, color=color.rgb(135, 206, 235), linewidth=1, title="VWAP NY", editable=false, display=display.all - display.status_line)
+plot(showVwapGlobex ? vwapGX : na, color=color.gray, linewidth=1, linestyle=plot.linestyle_dashed, title="VWAP Diario", editable=false, display=display.all - display.status_line)
+plot(showBands ? vwapNY + sdNY : na, "+1σ", color=color.new(color.blue, 60), display=display.all - display.status_line)
+plot(showBands ? vwapNY - sdNY : na, "-1σ", color=color.new(color.blue, 60), display=display.all - display.status_line)
+plot(showBands ? vwapNY + 2 * sdNY : na, "+2σ", color=color.new(color.blue, 40), display=display.all - display.status_line)
+plot(showBands ? vwapNY - 2 * sdNY : na, "-2σ", color=color.new(color.blue, 40), display=display.all - display.status_line)
+plot(showBands ? vwapNY + 3 * sdNY : na, "+3σ", color=color.new(color.blue, 20), display=display.all - display.status_line)
+plot(showBands ? vwapNY - 3 * sdNY : na, "-3σ", color=color.new(color.blue, 20), display=display.all - display.status_line)
+
+// 1. Delta y volumen (marcas)
+plotshape(showDelta and deltaAnom and deltaProxy > 0, "Delta anómalo +", shape.triangleup, location.belowbar, color.new(color.green, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showDelta and deltaAnom and deltaProxy < 0, "Delta anómalo -", shape.triangledown, location.abovebar, color.new(color.red, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showVolume and volRel > 1.5, "Volumen iniciativa", shape.circle, location.belowbar, color.new(color.purple, 0), size=size.tiny, display=display.all - display.status_line)
+
+// 3. Estructura
+plotshape(showBOS and bosUp, "BOS alcista", shape.labelup, location.belowbar, color.new(color.green, 0), text="BOS", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showBOS and bosDn, "BOS bajista", shape.labeldown, location.abovebar, color.new(color.red, 0), text="BOS", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showCHoCH and chochUp, "CHoCH alcista", shape.labelup, location.belowbar, color.new(color.teal, 0), text="CHoCH", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showCHoCH and chochDn, "CHoCH bajista", shape.labeldown, location.abovebar, color.new(color.maroon, 0), text="CHoCH", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showMSS and brkUp, "MSS alcista", shape.diamond, location.belowbar, color.new(color.gray, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showMSS and brkDn, "MSS bajista", shape.diamond, location.abovebar, color.new(color.gray, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showCRT and crtBull, "CRT alcista", shape.triangleup, location.belowbar, color.new(color.lime, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showCRT and crtBear, "CRT bajista", shape.triangledown, location.abovebar, color.new(color.orange, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showIFVG and ifvgBull, "iFVG alcista", shape.labelup, location.belowbar, color.new(color.orange, 0), text="iFVG", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showIFVG and ifvgBear, "iFVG bajista", shape.labeldown, location.abovebar, color.new(color.orange, 0), text="iFVG", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
+plotshape(showSMT and smtBear, "SMT bajista", shape.xcross, location.abovebar, color.new(color.fuchsia, 0), size=size.tiny, display=display.all - display.status_line)
+plotshape(showSMT and smtBull, "SMT alcista", shape.xcross, location.belowbar, color.new(color.fuchsia, 0), size=size.tiny, display=display.all - display.status_line)
+plot(showPDHPDL ? pdh : na, color=color.orange, linewidth=2, title="PDH", linestyle=plot.linestyle_dashed, editable=false, display=display.all - display.status_line)
+plot(showPDHPDL ? pdl : na, color=color.orange, linewidth=2, title="PDL", linestyle=plot.linestyle_dashed, editable=false, display=display.all - display.status_line)
+
+// 4. Contexto
+plot(showEMA9 ? emaFast : na, color=color.blue, linewidth=2, title="EMA 9", editable=false, display=display.all - display.status_line)
+plot(showEMA21 ? emaMid : na, color=color.orange, linewidth=2, title="EMA 21", linestyle=plot.linestyle_dashed, editable=false, display=display.all - display.status_line)
+plot(showEMA50 ? emaSlow : na, color=color.fuchsia, linewidth=1, title="EMA 50", editable=false, display=display.all - display.status_line)
+plot(showEMA200 ? ema200 : na, color=color.gray, linewidth=2, title="EMA 200", editable=false, display=display.all - display.status_line)
+plot(showBB ? bbUp : na, "Bollinger sup", color=color.new(color.gray, 40), display=display.all - display.status_line)
+plot(showBB ? bbBasis : na, "Bollinger media", color=color.new(color.gray, 60), display=display.all - display.status_line)
+plot(showBB ? bbLow : na, "Bollinger inf", color=color.new(color.gray, 40), display=display.all - display.status_line)
+plot(orbNYhiPlot, title="ORB NY máximo", color=#ff00dd, linewidth=4, editable=false, display=display.all - display.status_line)
+plot(orbNYloPlot, title="ORB NY mínimo", color=#ff00dd, linewidth=4, editable=false, display=display.all - display.status_line)
+plot(orbUKhiPlot, title="ORB UK máximo", color=#ff00dd, linewidth=4, editable=false, display=display.all - display.status_line)
+plot(orbUKloPlot, title="ORB UK mínimo", color=#ff00dd, linewidth=4, editable=false, display=display.all - display.status_line)
+
+// ---- Etiquetas pequeñas al final de cada línea (solo última vela) ----
+var array<label> endLabels = array.new<label>()
+f_lbl(float y, string t, color c) =>
+    label.new(bar_index + 2, y, t, xloc=xloc.bar_index, style=label.style_label_left, textcolor=c, color=color.new(color.black, 100), size=size.small)
+if barstate.islast
+    for lb in endLabels
+        label.delete(lb)
+    endLabels.clear()
+    if showLineLabels
+        if showVwapNY and not na(vwapNY)
+            endLabels.push(f_lbl(vwapNY, "VWAP NY", color.blue))
+        if showVwapGlobex and not na(vwapGX)
+            endLabels.push(f_lbl(vwapGX, "VWAP Diario", color.gray))
+        if showBands and not na(sdNY)
+            endLabels.push(f_lbl(vwapNY + sdNY, "+1σ", color.blue))
+            endLabels.push(f_lbl(vwapNY - sdNY, "-1σ", color.blue))
+            endLabels.push(f_lbl(vwapNY + 2 * sdNY, "+2σ", color.blue))
+            endLabels.push(f_lbl(vwapNY - 2 * sdNY, "-2σ", color.blue))
+            endLabels.push(f_lbl(vwapNY + 3 * sdNY, "+3σ", color.blue))
+            endLabels.push(f_lbl(vwapNY - 3 * sdNY, "-3σ", color.blue))
+        if showEMA9 and not na(emaFast)
+            endLabels.push(f_lbl(emaFast, "EMA 9", color.blue))
+        if showEMA21 and not na(emaMid)
+            endLabels.push(f_lbl(emaMid, "EMA 21", color.orange))
+        if showEMA50 and not na(emaSlow)
+            endLabels.push(f_lbl(emaSlow, "EMA 50", color.fuchsia))
+        if showEMA200 and not na(ema200)
+            endLabels.push(f_lbl(ema200, "EMA 200", color.gray))
+        if showPDHPDL and not na(pdh)
+            endLabels.push(f_lbl(pdh, "PDH", color.orange))
+        if showPDHPDL and not na(pdl)
+            endLabels.push(f_lbl(pdl, "PDL", color.orange))
+        if showProfile and not na(pocLevel)
+            endLabels.push(f_lbl(pocLevel, "POC", color.yellow))
+            endLabels.push(f_lbl(vahLevel, "VAH", color.aqua))
+            endLabels.push(f_lbl(valLevel, "VAL", color.aqua))
+
+// ---- Leyenda: franja en la parte inferior derecha, alfabética, nombres en negrita ----
+var table leg = table.new(position.bottom_right, 6, 10, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40), frame_width=1, frame_color=color.new(color.gray, 40))
+if barstate.islast
+    table.cell(leg, 0, 0, "Leyenda", text_color=color.yellow, text_size=size.tiny, text_formatting=text.format_bold)
+    table.merge_cells(leg, 0, 0, 5, 0)
+    string[] legTerm = array.from(
+      "±1σ/±2σ/±3σ",
+      "ADX 14",
+      "ATR 14",
+      "BOS",
+      "CHoCH",
+      "CRT",
+      "Delta 1m (aprox.)",
+      "Delta mejorado (5m)",
+      "EMA 9/21/50/200",
+      "FVG / iFVG",
+      "LVN",
+      "MACD hist.",
+      "MSS",
+      "PDH/PDL",
+      "POC",
+      "RSI 14",
+      "Sesgo",
+      "Single prints",
+      "SMT",
+      "VAH/VAL",
+      "VolRel",
+      "VWAP Diario",
+      "VWAP NY")
+    string[] legMean = array.from(
+      "desviaciones estándar del VWAP NY; más lejos = más extendido",
+      "fuerza de la tendencia: ≥25 fuerte, 20-25 media, <20 débil",
+      "Volatilidad. x = ATR / media 50 velas: azul <0.8, verde 0.8-1.2, amarillo 1.2-1.5, rojo >1.5",
+      "cierre que supera el último máximo (o mínimo) a favor de la tendencia: la tendencia sigue",
+      "cierre que rompe el último swing en contra de la tendencia: primer aviso de cambio",
+      "vela que barre el máximo o mínimo de la anterior y cierra de vuelta adentro",
+      "presión en vela actual de 1m (volumen × cuerpo/rango); anómalo = 2× media",
+      "delta acumulado en vela de 5m [X/5m] o rodante 5m para contexto MTF en 1m",
+      "medias exponenciales de 9, 21, 50 y 200 velas",
+      "FVG: hueco de 3 velas; iFVG: ese hueco invertido tras un cierre del otro lado",
+      "niveles del perfil con ≤40% del volumen máximo",
+      "positivo = momentum alcista; negativo = momentum bajista",
+      "cierre que rompe el último swing en cualquier dirección (rombo gris)",
+      "máximo y mínimo del día anterior (líneas naranjas punteadas)",
+      "nivel con más volumen del perfil",
+      "sobre 50 momentum alcista; bajo 50 bajista",
+      "dirección de la estructura según BOS / CHoCH",
+      "niveles tocados por una sola vela (aprox.)",
+      "cruz fucsia: el NQ hace máximo (o mínimo) nuevo y el ES no lo confirma (divergencia)",
+      "bordes del área de valor (70% del volumen)",
+      "volumen / media 20 velas (verde ≥1.5, amarillo 0.8-1.5, rojo <0.8)",
+      "promedio ponderado por volumen desde las 18:00 ET",
+      "promedio ponderado por volumen desde las 09:30 ET")
+    int nLeg = array.size(legTerm)
+    for i = 0 to nLeg - 1
+        int r = 1 + i % 8
+        int c = int(math.floor(i / 8)) * 2
+        table.cell(leg, c, r, array.get(legTerm, i), text_color=color.white, text_size=size.tiny, text_halign=text.align_left, text_formatting=text.format_bold)
+        table.cell(leg, c + 1, r, array.get(legMean, i), text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
+    table.cell(leg, 0, 9, "Nota Delta: si Delta 1m retrocede pero Delta 5m mantiene polaridad, indica absorción/pullback en 1m y no giro de tendencia.", text_color=color.yellow, text_size=size.tiny, text_halign=text.align_left)
+    table.merge_cells(leg, 0, 9, 5, 9)
+
+// ---- Tabla de lecturas con color por calidad ----
+// VolRel: >=1.5 verde (iniciativa), 0.8-1.5 amarillo (aceptación), <0.8 rojo (rechazo).
+// Delta: >0 verde, <0 rojo. RSI: >50 verde, <50 rojo. ADX: >=25 verde, 20-25 amarillo, <20 rojo.
+// MACD hist.: >0 verde, <0 rojo. Sesgo: alcista verde, bajista rojo.
+var table tbl = table.new(position.top_right, 2, 16, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40))
+if barstate.islast
+    color cHead = color.new(color.gray, 60)
+    color cOff = color.new(color.gray, 85)
+    color cGreen = color.new(color.green, 20)
+    color cRed = color.new(color.red, 20)
+    color cYellow = color.new(color.yellow, 30)
+    color cNeutral = color.new(color.gray, 60)
+    table.cell(tbl, 0, 0, "Lectura", text_color=color.white, bgcolor=cHead)
+    table.cell(tbl, 1, 0, "Valor", text_color=color.white, bgcolor=cHead)
+
+    color cVol = not showVolume ? cOff : na(volRel) ? cNeutral : volRel >= 1.5 ? cGreen : volRel >= 0.8 ? cYellow : cRed
+    color cVolT = not showVolume or na(volRel) ? color.white : (volRel >= 0.8 and volRel < 1.5) ? color.black : color.white
+    table.cell(tbl, 0, 1, "VolRel", text_color=color.white)
+    table.cell(tbl, 1, 1, showVolume ? str.tostring(volRel, "#.##") : "off", text_color=cVolT, bgcolor=cVol)
+
+    color cRsi = not showRSI ? cOff : na(rsiV) ? cNeutral : rsiV > 50 ? cGreen : cRed
+    table.cell(tbl, 0, 2, "RSI 14", text_color=color.white)
+    table.cell(tbl, 1, 2, showRSI ? str.tostring(rsiV, "#.#") : "off", text_color=color.white, bgcolor=cRsi)
+
+    color cAdx = not showADX ? cOff : na(adxV) ? cNeutral : adxV >= 25 ? cGreen : adxV >= 20 ? cYellow : cRed
+    color cAdxT = showADX and not na(adxV) and adxV >= 20 and adxV < 25 ? color.black : color.white
+    table.cell(tbl, 0, 3, "ADX 14", text_color=color.white)
+    table.cell(tbl, 1, 3, showADX ? str.tostring(adxV, "#.#") : "off", text_color=cAdxT, bgcolor=cAdx)
+
+    color cMacd = not showMACD ? cOff : na(macdH) ? cNeutral : macdH > 0 ? cGreen : cRed
+    table.cell(tbl, 0, 4, "MACD hist.", text_color=color.white)
+    table.cell(tbl, 1, 4, showMACD ? str.tostring(macdH, "#.##") : "off", text_color=color.white, bgcolor=cMacd)
+    color cMacdL = not showMACD ? cOff : na(macdL) ? cNeutral : macdL > 0 ? cGreen : cRed
+    table.cell(tbl, 0, 5, "MACD", text_color=color.white)
+    table.cell(tbl, 1, 5, showMACD ? str.tostring(macdL, "#.##") : "off", text_color=color.white, bgcolor=cMacdL)
+
+    table.cell(tbl, 0, 6, "ATR 14", text_color=color.white)
+    color cAtr = not showAtr ? cOff : na(atrRatio) ? cNeutral : atrRatio < 0.8 ? color.new(color.blue, 20) : atrRatio <= 1.2 ? cGreen : atrRatio <= 1.5 ? cYellow : cRed
+    table.cell(tbl, 1, 6, showAtr ? str.tostring(atrV, "#.#") + " pts · x" + str.tostring(atrRatio, "0.00") : "off", text_color=color.white, bgcolor=cAtr)
+    table.cell(tbl, 0, 7, "POC", text_color=color.white)
+    table.cell(tbl, 1, 7, showProfile ? pocTxt : "off", text_color=color.white)
+    table.cell(tbl, 0, 8, "VAH", text_color=color.white)
+    table.cell(tbl, 1, 8, showProfile ? vahTxt : "off", text_color=color.white)
+    table.cell(tbl, 0, 9, "VAL", text_color=color.white)
+    table.cell(tbl, 1, 9, showProfile ? valTxt : "off", text_color=color.white)
+    table.cell(tbl, 0, 10, "LVN", text_color=color.white)
+    table.cell(tbl, 1, 10, showProfile ? lvnTxt : "off", text_color=color.white)
+    table.cell(tbl, 0, 11, "Single prints", text_color=color.white)
+    table.cell(tbl, 1, 11, showTPO ? singlesTxt : "off", text_color=color.white)
+
+    color cDel = not showDelta ? cOff : deltaProxy > 0 ? cGreen : deltaProxy < 0 ? cRed : cNeutral
+    table.cell(tbl, 0, 12, "Delta 1m (aprox.)", text_color=color.white)
+    table.cell(tbl, 1, 12, showDelta ? str.tostring(deltaProxy, "#") + (deltaAnom ? " anómalo" : "") : "off", text_color=color.white, bgcolor=cDel)
+
+    color cDel5m = not showDelta ? cOff : na(delta5mVal) ? cNeutral : delta5mVal > 0 ? cGreen : delta5mVal < 0 ? cRed : cNeutral
+    string del5mSuffix = delta5mMode == "Vela 5m en curso" ? " [" + str.tostring(barsIn5m) + "/5m]" : " [5m rod.]"
+    table.cell(tbl, 0, 13, "delta mejorado (5m)", text_color=color.white)
+    table.cell(tbl, 1, 13, showDelta ? (na(delta5mVal) ? "—" : str.tostring(delta5mVal, "#") + del5mSuffix + (delta5mAnom ? " anómalo" : "")) : "off", text_color=color.white, bgcolor=cDel5m)
+
+    color cSesgo = trend == 1 ? cGreen : trend == -1 ? cRed : cNeutral
+    table.cell(tbl, 0, 14, "Sesgo estructura", text_color=color.white)
+    table.cell(tbl, 1, 14, trend == 1 ? "alcista" : trend == -1 ? "bajista" : "sin definir", text_color=color.white, bgcolor=cSesgo)
+    bool buyG = rsiV > 50 and macdH > 0 and adxV >= 25 and volRel >= 1.5
+    bool sellG = rsiV < 50 and macdH < 0 and adxV >= 25 and volRel >= 1.5
+    bool buyY = rsiV > 50 and macdH > 0 and (adxV >= 20 or volRel >= 0.8)
+    bool sellY = rsiV < 50 and macdH < 0 and (adxV >= 20 or volRel >= 0.8)
+    string devTxt = buyG ? "Comprar" : sellG ? "Vender" : buyY ? "Comprar" : sellY ? "Vender" : "—"
+    color devBg = buyG or sellG ? cGreen : buyY or sellY ? cYellow : cNeutral
+    color devTxtC = (buyY or sellY) and not (buyG or sellG) ? color.black : color.white
+    table.cell(tbl, 0, 15, "deberia", text_color=color.white)
+    table.cell(tbl, 1, 15, devTxt, text_color=devTxtC, bgcolor=devBg)
