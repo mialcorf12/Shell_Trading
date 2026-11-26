@@ -36,6 +36,7 @@ con pine script v6, quiero que uses indicadores/indicadores.md, para crear un ar
 - Valores ocultos en la línea de estado en todas las líneas y marcas (`display.all - display.status_line`).
 
 **Tabla de lecturas (superior derecha)**
+- Dos columnas (Lectura | Valor), sin símbolos, con texto en `size.small`. Orden de filas: ... ATR 14, VAH, POC, VAL, LVN, Single prints, delta 1m, delta 5m, sesgo, deberia…deberia5.
 - VolRel (verde ≥ 1.5, amarillo 0.8–1.5, rojo < 0.8), RSI (verde > 50), ADX (verde ≥ 25, amarillo 20–25, rojo < 20), MACD histograma y MACD línea (verde > 0, rojo < 0), ATR en puntos con escala x = ATR / media 50 (azul < 0.8, verde 0.8–1.2, amarillo 1.2–1.5, rojo > 1.5), POC, VAH, VAL, LVN, single prints, delta 1m aproximado, delta mejorado 5m (muestra progreso [X/5m] o rodante), sesgo de estructura.
 - Fila **"deberia"**, con la lógica en este orden de prioridad (evalúa MACD histograma):
   - Comprar verde: RSI > 50 y MACD histograma > 0 y ADX ≥ 25 y VolRel ≥ 1.5.
@@ -45,9 +46,11 @@ con pine script v6, quiero que uses indicadores/indicadores.md, para crear un ar
   - Si ninguna se cumple: "—".
 
 **Leyenda (inferior derecha)**
-- Tabla con los 23 términos (incluye SMT, Delta 1m y Delta mejorado 5m), en orden alfabético y nombres en negrita, llenada de arriba abajo y luego de izquierda a derecha. Incluye fila inferior fusionada con nota operativa para interpretar divergencias entre Delta 1m y Delta 5m (absorción vs giro de tendencia).
+- Tabla de 10 columnas con 24 términos en orden alfabético y nombres en negrita, llenada de arriba abajo y luego de izquierda a derecha. Cada término tiene su símbolo visual en una celda propia, con el mismo color que en la gráfica: CRT ▲▼, Delta 1m ▲▼, MSS ◆, PDH/PDL ┄┄, SMT ✕, VolRel ●, ORB ━ fucsia, POC ━ amarillo, VAH/VAL ━ cyan. CRT y Delta son los únicos con dos símbolos.
+- Fila inferior fusionada con nota operativa para interpretar divergencias entre Delta 1m y Delta 5m (absorción vs giro de tendencia).
 
 **Pendientes**
+- Documento ODD movido a `odd/tasks/indicadores/indicadores-tradingview.md` (antes `odd/tasks/indicadores-tradingview.md`).
 - Compilar y probar en TradingView: el código no se pudo compilar desde la sesión. Revisar la consola de Pine.
 - Validar la fila "deberia" con backtest, costos reales y fuera de muestra antes de usarla. Los umbrales son propuestas, no datos validados.
 - Leyenda en el panel inferior: Pine solo puede ubicar la tabla en el panel inferior con un script aparte (`overlay=false`). Pendiente de decisión.

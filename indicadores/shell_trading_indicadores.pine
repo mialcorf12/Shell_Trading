@@ -238,6 +238,32 @@ float rsiV = ta.rsi(close, 14)
 [diP, diM, adxV] = ta.dmi(14, 14)
 [macdL, macdS, macdH] = ta.macd(close, 12, 26, 9)
 [bbBasis, bbUp, bbLow] = ta.bb(close, 20, 2.0)
+
+// ---- Señales "deberia" (evaluadas en cada vela, no solo en la última) ----
+bool buyG = rsiV > 50 and macdH > 0 and adxV >= 25 and volRel >= 1.5
+bool sellG = rsiV < 50 and macdH < 0 and adxV >= 25 and volRel >= 1.5
+bool buyY = rsiV > 50 and macdH > 0 and (adxV >= 20 or volRel >= 0.8)
+bool sellY = rsiV < 50 and macdH < 0 and (adxV >= 20 or volRel >= 0.8)
+// deberia2: igual que deberia pero evaluando la línea MACD (macdL) en lugar del histograma (macdH)
+bool buyG2 = rsiV > 50 and macdL > 0 and adxV >= 25 and volRel >= 1.5
+bool sellG2 = rsiV < 50 and macdL < 0 and adxV >= 25 and volRel >= 1.5
+bool buyY2 = rsiV > 50 and macdL > 0 and (adxV >= 20 or volRel >= 0.8)
+bool sellY2 = rsiV < 50 and macdL < 0 and (adxV >= 20 or volRel >= 0.8)
+// deberia3: igual que deberia, con AND sesgo de estructura (alcista para compras, bajista para ventas)
+bool buyG3 = trend == 1 and rsiV > 50 and macdH > 0 and adxV >= 25 and volRel >= 1.5
+bool sellG3 = trend == -1 and rsiV < 50 and macdH < 0 and adxV >= 25 and volRel >= 1.5
+bool buyY3 = trend == 1 and rsiV > 50 and macdH > 0 and (adxV >= 20 or volRel >= 0.8)
+bool sellY3 = trend == -1 and rsiV < 50 and macdH < 0 and (adxV >= 20 or volRel >= 0.8)
+// deberia4: igual que deberia2 (MACD línea), con AND sesgo de estructura
+bool buyG4 = trend == 1 and rsiV > 50 and macdL > 0 and adxV >= 25 and volRel >= 1.5
+bool sellG4 = trend == -1 and rsiV < 50 and macdL < 0 and adxV >= 25 and volRel >= 1.5
+bool buyY4 = trend == 1 and rsiV > 50 and macdL > 0 and (adxV >= 20 or volRel >= 0.8)
+bool sellY4 = trend == -1 and rsiV < 50 and macdL < 0 and (adxV >= 20 or volRel >= 0.8)
+// deberia5: sesgo de estructura + precio vs VWAP NY + cruce del MACD línea por 0 (evento, no estado)
+bool macdCrossUp0 = ta.crossover(macdL, 0)
+bool macdCrossDn0 = ta.crossunder(macdL, 0)
+bool buy5 = trend == 1 and close > vwapNY and macdCrossUp0
+bool sell5 = trend == -1 and close < vwapNY and macdCrossDn0
 float emaFast = ta.ema(close, 9)
 float emaMid = ta.ema(close, 21)
 float emaSlow = ta.ema(close, 50)
@@ -376,6 +402,39 @@ plotshape(showIFVG and ifvgBull, "iFVG alcista", shape.labelup, location.belowba
 plotshape(showIFVG and ifvgBear, "iFVG bajista", shape.labeldown, location.abovebar, color.new(color.orange, 0), text="iFVG", textcolor=color.white, size=size.tiny, display=display.all - display.status_line)
 plotshape(showSMT and smtBear, "SMT bajista", shape.xcross, location.abovebar, color.new(color.fuchsia, 0), size=size.tiny, display=display.all - display.status_line)
 plotshape(showSMT and smtBull, "SMT alcista", shape.xcross, location.belowbar, color.new(color.fuchsia, 0), size=size.tiny, display=display.all - display.status_line)
+
+// ---- Marcas "deberia": C = comprar, V = vender. Una por vela (verde tiene prioridad sobre amarillo). ----
+bool showDeberia = input.bool(true, "Señales deberia (C comprar / V vender)", group=G4,
+     tooltip="Marca C/V en cada vela donde la fila 'deberia' da Comprar o Vender. Verde = todas las condiciones fuertes; amarillo = condiciones mínimas.")
+bool showDeberia2 = input.bool(true, "Señales deberia2 (c/v, MACD línea)", group=G4,
+     tooltip="Igual que deberia, pero evaluando la línea MACD en lugar del histograma. Letras en minúsculas.")
+plotchar(showDeberia and buyG, "Comprar verde", "C", location.belowbar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia and buyY and not buyG, "Comprar amarillo", "C", location.belowbar, color.yellow, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia and sellG, "Vender verde", "V", location.abovebar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia and sellY and not sellG, "Vender amarillo", "V", location.abovebar, color.yellow, size=size.small, display=display.all - display.status_line)
+
+// ---- Marcas "deberia2" (MACD línea). Minúsculas c/v para distinguirlas de deberia. ----
+plotchar(showDeberia2 and buyG2, "Comprar verde 2", "c", location.belowbar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia2 and buyY2 and not buyG2, "Comprar amarillo 2", "c", location.belowbar, color.yellow, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia2 and sellG2, "Vender verde 2", "v", location.abovebar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia2 and sellY2 and not sellG2, "Vender amarillo 2", "v", location.abovebar, color.yellow, size=size.small, display=display.all - display.status_line)
+
+// ---- Interruptores y marcas deberia3 / deberia4 (con sesgo). Letras C3/V3 y C4/V4. ----
+bool showDeberia3 = input.bool(true, "Señales deberia3 (C3/V3, histograma + sesgo)", group=G4)
+bool showDeberia4 = input.bool(true, "Señales deberia4 (C4/V4, MACD línea + sesgo)", group=G4)
+plotchar(showDeberia3 and buyG3, "Comprar verde 3", "C3", location.belowbar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia3 and buyY3 and not buyG3, "Comprar amarillo 3", "C3", location.belowbar, color.yellow, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia3 and sellG3, "Vender verde 3", "V3", location.abovebar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia3 and sellY3 and not sellG3, "Vender amarillo 3", "V3", location.abovebar, color.yellow, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia4 and buyG4, "Comprar verde 4", "C4", location.belowbar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia4 and buyY4 and not buyG4, "Comprar amarillo 4", "C4", location.belowbar, color.yellow, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia4 and sellG4, "Vender verde 4", "V4", location.abovebar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia4 and sellY4 and not sellG4, "Vender amarillo 4", "V4", location.abovebar, color.yellow, size=size.small, display=display.all - display.status_line)
+
+// ---- deberia5: una marca por cruce (C5 / V5), verde ----
+bool showDeberia5 = input.bool(true, "Señales deberia5 (C5/V5, cruce MACD + VWAP + sesgo)", group=G4)
+plotchar(showDeberia5 and buy5, "Comprar 5", "C5", location.belowbar, color.green, size=size.small, display=display.all - display.status_line)
+plotchar(showDeberia5 and sell5, "Vender 5", "V5", location.abovebar, color.green, size=size.small, display=display.all - display.status_line)
 plot(showPDHPDL ? pdh : na, color=color.orange, linewidth=2, title="PDH", linestyle=plot.linestyle_dashed, editable=false, display=display.all - display.status_line)
 plot(showPDHPDL ? pdl : na, color=color.orange, linewidth=2, title="PDL", linestyle=plot.linestyle_dashed, editable=false, display=display.all - display.status_line)
 
@@ -430,10 +489,10 @@ if barstate.islast
             endLabels.push(f_lbl(valLevel, "VAL", color.aqua))
 
 // ---- Leyenda: franja en la parte inferior derecha, alfabética, nombres en negrita ----
-var table leg = table.new(position.bottom_right, 6, 10, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40), frame_width=1, frame_color=color.new(color.gray, 40))
+var table leg = table.new(position.bottom_right, 10, 10, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40), frame_width=1, frame_color=color.new(color.gray, 40))
 if barstate.islast
     table.cell(leg, 0, 0, "Leyenda", text_color=color.yellow, text_size=size.tiny, text_formatting=text.format_bold)
-    table.merge_cells(leg, 0, 0, 5, 0)
+    table.merge_cells(leg, 0, 0, 9, 0)
     string[] legTerm = array.from(
       "±1σ/±2σ/±3σ",
       "ADX 14",
@@ -448,6 +507,7 @@ if barstate.islast
       "LVN",
       "MACD hist.",
       "MSS",
+      "ORB",
       "PDH/PDL",
       "POC",
       "RSI 14",
@@ -471,31 +531,76 @@ if barstate.islast
       "FVG: hueco de 3 velas; iFVG: ese hueco invertido tras un cierre del otro lado",
       "niveles del perfil con ≤40% del volumen máximo",
       "positivo = momentum alcista; negativo = momentum bajista",
-      "cierre que rompe el último swing en cualquier dirección (rombo gris)",
-      "máximo y mínimo del día anterior (líneas naranjas punteadas)",
+      "cierre que rompe el último swing en cualquier dirección",
+      "máximo y mínimo de 09:30-09:45 ET (NY) y 01:00-01:15 ET (UK): líneas fucsias",
+      "máximo y mínimo del día anterior",
       "nivel con más volumen del perfil",
       "sobre 50 momentum alcista; bajo 50 bajista",
       "dirección de la estructura según BOS / CHoCH",
       "niveles tocados por una sola vela (aprox.)",
-      "cruz fucsia: el NQ hace máximo (o mínimo) nuevo y el ES no lo confirma (divergencia)",
+      "el NQ hace máximo (o mínimo) nuevo y el ES no lo confirma (divergencia)",
       "bordes del área de valor (70% del volumen)",
       "volumen / media 20 velas (verde ≥1.5, amarillo 0.8-1.5, rojo <0.8)",
       "promedio ponderado por volumen desde las 18:00 ET",
       "promedio ponderado por volumen desde las 09:30 ET")
+    // Símbolos de la gráfica: misma forma y mismo color que plotshape / plot, en celdas propias junto al término.
+    string[] legSym1 = array.new_string(array.size(legTerm), "")
+    string[] legSym2 = array.new_string(array.size(legTerm), "")
+    color[] legCol1 = array.new_color(array.size(legTerm), color.white)
+    color[] legCol2 = array.new_color(array.size(legTerm), color.white)
+    int iCrt = array.indexof(legTerm, "CRT")
+    array.set(legSym1, iCrt, "▲")
+    array.set(legCol1, iCrt, color.lime)
+    array.set(legSym2, iCrt, "▼")
+    array.set(legCol2, iCrt, color.orange)
+    int iDel = array.indexof(legTerm, "Delta 1m (aprox.)")
+    array.set(legSym1, iDel, "▲")
+    array.set(legCol1, iDel, color.green)
+    array.set(legSym2, iDel, "▼")
+    array.set(legCol2, iDel, color.red)
+    int iMss = array.indexof(legTerm, "MSS")
+    array.set(legSym1, iMss, "◆")
+    array.set(legCol1, iMss, color.gray)
+    int iPd = array.indexof(legTerm, "PDH/PDL")
+    array.set(legSym1, iPd, "┄┄")
+    array.set(legCol1, iPd, color.orange)
+    int iSmt = array.indexof(legTerm, "SMT")
+    array.set(legSym1, iSmt, "✕")
+    array.set(legCol1, iSmt, color.fuchsia)
+    int iOrb = array.indexof(legTerm, "ORB")
+    array.set(legSym1, iOrb, "━")
+    array.set(legCol1, iOrb, #ff00dd)
+    int iPoc = array.indexof(legTerm, "POC")
+    array.set(legSym1, iPoc, "━")
+    array.set(legCol1, iPoc, color.yellow)
+    int iVah = array.indexof(legTerm, "VAH/VAL")
+    array.set(legSym1, iVah, "━")
+    array.set(legCol1, iVah, color.aqua)
+    int iVol = array.indexof(legTerm, "VolRel")
+    array.set(legSym1, iVol, "●")
+    array.set(legCol1, iVol, color.purple)
+    // Bloque 1 (columnas 0-3): término | símbolo 1 | símbolo 2 | explicación. Solo CRT y Delta usan símbolo 2.
+    // Bloques 2 y 3 (columnas 4-6 y 7-9): término | símbolo 1 | explicación.
     int nLeg = array.size(legTerm)
     for i = 0 to nLeg - 1
         int r = 1 + i % 8
-        int c = int(math.floor(i / 8)) * 2
+        int b = int(math.floor(i / 8))
+        int c = b == 0 ? 0 : b == 1 ? 4 : 7
         table.cell(leg, c, r, array.get(legTerm, i), text_color=color.white, text_size=size.tiny, text_halign=text.align_left, text_formatting=text.format_bold)
-        table.cell(leg, c + 1, r, array.get(legMean, i), text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(leg, c + 1, r, array.get(legSym1, i), text_color=array.get(legCol1, i), text_size=size.tiny, text_formatting=text.format_bold)
+        if b == 0
+            table.cell(leg, c + 2, r, array.get(legSym2, i), text_color=array.get(legCol2, i), text_size=size.tiny, text_formatting=text.format_bold)
+            table.cell(leg, c + 3, r, array.get(legMean, i), text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
+        else
+            table.cell(leg, c + 2, r, array.get(legMean, i), text_color=color.silver, text_size=size.tiny, text_halign=text.align_left)
     table.cell(leg, 0, 9, "Nota Delta: si Delta 1m retrocede pero Delta 5m mantiene polaridad, indica absorción/pullback en 1m y no giro de tendencia.", text_color=color.yellow, text_size=size.tiny, text_halign=text.align_left)
-    table.merge_cells(leg, 0, 9, 5, 9)
+    table.merge_cells(leg, 0, 9, 9, 9)
 
 // ---- Tabla de lecturas con color por calidad ----
 // VolRel: >=1.5 verde (iniciativa), 0.8-1.5 amarillo (aceptación), <0.8 rojo (rechazo).
 // Delta: >0 verde, <0 rojo. RSI: >50 verde, <50 rojo. ADX: >=25 verde, 20-25 amarillo, <20 rojo.
 // MACD hist.: >0 verde, <0 rojo. Sesgo: alcista verde, bajista rojo.
-var table tbl = table.new(position.top_right, 2, 16, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40))
+var table tbl = table.new(position.top_right, 2, 20, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 40))
 if barstate.islast
     color cHead = color.new(color.gray, 60)
     color cOff = color.new(color.gray, 85)
@@ -503,62 +608,81 @@ if barstate.islast
     color cRed = color.new(color.red, 20)
     color cYellow = color.new(color.yellow, 30)
     color cNeutral = color.new(color.gray, 60)
-    table.cell(tbl, 0, 0, "Lectura", text_color=color.white, bgcolor=cHead)
-    table.cell(tbl, 1, 0, "Valor", text_color=color.white, bgcolor=cHead)
+    table.cell(tbl, 0, 0, "Lectura", text_color=color.white, bgcolor=cHead, text_size=size.small)
+    table.cell(tbl, 1, 0, "Valor", text_color=color.white, bgcolor=cHead, text_size=size.small)
 
     color cVol = not showVolume ? cOff : na(volRel) ? cNeutral : volRel >= 1.5 ? cGreen : volRel >= 0.8 ? cYellow : cRed
     color cVolT = not showVolume or na(volRel) ? color.white : (volRel >= 0.8 and volRel < 1.5) ? color.black : color.white
-    table.cell(tbl, 0, 1, "VolRel", text_color=color.white)
-    table.cell(tbl, 1, 1, showVolume ? str.tostring(volRel, "#.##") : "off", text_color=cVolT, bgcolor=cVol)
+    table.cell(tbl, 0, 1, "VolRel", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 1, showVolume ? str.tostring(volRel, "#.##") : "off", text_color=cVolT, bgcolor=cVol, text_size=size.small)
 
     color cRsi = not showRSI ? cOff : na(rsiV) ? cNeutral : rsiV > 50 ? cGreen : cRed
-    table.cell(tbl, 0, 2, "RSI 14", text_color=color.white)
-    table.cell(tbl, 1, 2, showRSI ? str.tostring(rsiV, "#.#") : "off", text_color=color.white, bgcolor=cRsi)
+    table.cell(tbl, 0, 2, "RSI 14", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 2, showRSI ? str.tostring(rsiV, "#.#") : "off", text_color=color.white, bgcolor=cRsi, text_size=size.small)
 
     color cAdx = not showADX ? cOff : na(adxV) ? cNeutral : adxV >= 25 ? cGreen : adxV >= 20 ? cYellow : cRed
     color cAdxT = showADX and not na(adxV) and adxV >= 20 and adxV < 25 ? color.black : color.white
-    table.cell(tbl, 0, 3, "ADX 14", text_color=color.white)
-    table.cell(tbl, 1, 3, showADX ? str.tostring(adxV, "#.#") : "off", text_color=cAdxT, bgcolor=cAdx)
+    table.cell(tbl, 0, 3, "ADX 14", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 3, showADX ? str.tostring(adxV, "#.#") : "off", text_color=cAdxT, bgcolor=cAdx, text_size=size.small)
 
     color cMacd = not showMACD ? cOff : na(macdH) ? cNeutral : macdH > 0 ? cGreen : cRed
-    table.cell(tbl, 0, 4, "MACD hist.", text_color=color.white)
-    table.cell(tbl, 1, 4, showMACD ? str.tostring(macdH, "#.##") : "off", text_color=color.white, bgcolor=cMacd)
+    table.cell(tbl, 0, 4, "MACD hist.", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 4, showMACD ? str.tostring(macdH, "#.##") : "off", text_color=color.white, bgcolor=cMacd, text_size=size.small)
     color cMacdL = not showMACD ? cOff : na(macdL) ? cNeutral : macdL > 0 ? cGreen : cRed
-    table.cell(tbl, 0, 5, "MACD", text_color=color.white)
-    table.cell(tbl, 1, 5, showMACD ? str.tostring(macdL, "#.##") : "off", text_color=color.white, bgcolor=cMacdL)
+    table.cell(tbl, 0, 5, "MACD", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 5, showMACD ? str.tostring(macdL, "#.##") : "off", text_color=color.white, bgcolor=cMacdL, text_size=size.small)
 
-    table.cell(tbl, 0, 6, "ATR 14", text_color=color.white)
+    table.cell(tbl, 0, 6, "ATR 14", text_color=color.white, text_size=size.small)
     color cAtr = not showAtr ? cOff : na(atrRatio) ? cNeutral : atrRatio < 0.8 ? color.new(color.blue, 20) : atrRatio <= 1.2 ? cGreen : atrRatio <= 1.5 ? cYellow : cRed
-    table.cell(tbl, 1, 6, showAtr ? str.tostring(atrV, "#.#") + " pts · x" + str.tostring(atrRatio, "0.00") : "off", text_color=color.white, bgcolor=cAtr)
-    table.cell(tbl, 0, 7, "POC", text_color=color.white)
-    table.cell(tbl, 1, 7, showProfile ? pocTxt : "off", text_color=color.white)
-    table.cell(tbl, 0, 8, "VAH", text_color=color.white)
-    table.cell(tbl, 1, 8, showProfile ? vahTxt : "off", text_color=color.white)
-    table.cell(tbl, 0, 9, "VAL", text_color=color.white)
-    table.cell(tbl, 1, 9, showProfile ? valTxt : "off", text_color=color.white)
-    table.cell(tbl, 0, 10, "LVN", text_color=color.white)
-    table.cell(tbl, 1, 10, showProfile ? lvnTxt : "off", text_color=color.white)
-    table.cell(tbl, 0, 11, "Single prints", text_color=color.white)
-    table.cell(tbl, 1, 11, showTPO ? singlesTxt : "off", text_color=color.white)
+    table.cell(tbl, 1, 6, showAtr ? str.tostring(atrV, "#.#") + " pts · x" + str.tostring(atrRatio, "0.00") : "off", text_color=color.white, bgcolor=cAtr, text_size=size.small)
+    table.cell(tbl, 0, 8, "POC", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 8, showProfile ? pocTxt : "off", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 7, "VAH", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 7, showProfile ? vahTxt : "off", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 9, "VAL", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 9, showProfile ? valTxt : "off", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 10, "LVN", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 10, showProfile ? lvnTxt : "off", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 0, 11, "Single prints", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 11, showTPO ? singlesTxt : "off", text_color=color.white, text_size=size.small)
 
     color cDel = not showDelta ? cOff : deltaProxy > 0 ? cGreen : deltaProxy < 0 ? cRed : cNeutral
-    table.cell(tbl, 0, 12, "Delta 1m (aprox.)", text_color=color.white)
-    table.cell(tbl, 1, 12, showDelta ? str.tostring(deltaProxy, "#") + (deltaAnom ? " anómalo" : "") : "off", text_color=color.white, bgcolor=cDel)
+    table.cell(tbl, 0, 12, "Delta 1m (aprox.)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 12, showDelta ? str.tostring(deltaProxy, "#") + (deltaAnom ? " anómalo" : "") : "off", text_color=color.white, bgcolor=cDel, text_size=size.small)
 
     color cDel5m = not showDelta ? cOff : na(delta5mVal) ? cNeutral : delta5mVal > 0 ? cGreen : delta5mVal < 0 ? cRed : cNeutral
     string del5mSuffix = delta5mMode == "Vela 5m en curso" ? " [" + str.tostring(barsIn5m) + "/5m]" : " [5m rod.]"
-    table.cell(tbl, 0, 13, "delta mejorado (5m)", text_color=color.white)
-    table.cell(tbl, 1, 13, showDelta ? (na(delta5mVal) ? "—" : str.tostring(delta5mVal, "#") + del5mSuffix + (delta5mAnom ? " anómalo" : "")) : "off", text_color=color.white, bgcolor=cDel5m)
+    table.cell(tbl, 0, 13, "delta mejorado (5m)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 13, showDelta ? (na(delta5mVal) ? "—" : str.tostring(delta5mVal, "#") + del5mSuffix + (delta5mAnom ? " anómalo" : "")) : "off", text_color=color.white, bgcolor=cDel5m, text_size=size.small)
 
     color cSesgo = trend == 1 ? cGreen : trend == -1 ? cRed : cNeutral
-    table.cell(tbl, 0, 14, "Sesgo estructura", text_color=color.white)
-    table.cell(tbl, 1, 14, trend == 1 ? "alcista" : trend == -1 ? "bajista" : "sin definir", text_color=color.white, bgcolor=cSesgo)
-    bool buyG = rsiV > 50 and macdH > 0 and adxV >= 25 and volRel >= 1.5
-    bool sellG = rsiV < 50 and macdH < 0 and adxV >= 25 and volRel >= 1.5
-    bool buyY = rsiV > 50 and macdH > 0 and (adxV >= 20 or volRel >= 0.8)
-    bool sellY = rsiV < 50 and macdH < 0 and (adxV >= 20 or volRel >= 0.8)
+    table.cell(tbl, 0, 14, "Sesgo estructura", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 14, trend == 1 ? "alcista" : trend == -1 ? "bajista" : "sin definir", text_color=color.white, bgcolor=cSesgo, text_size=size.small)
     string devTxt = buyG ? "Comprar" : sellG ? "Vender" : buyY ? "Comprar" : sellY ? "Vender" : "—"
     color devBg = buyG or sellG ? cGreen : buyY or sellY ? cYellow : cNeutral
     color devTxtC = (buyY or sellY) and not (buyG or sellG) ? color.black : color.white
-    table.cell(tbl, 0, 15, "deberia", text_color=color.white)
-    table.cell(tbl, 1, 15, devTxt, text_color=devTxtC, bgcolor=devBg)
+    table.cell(tbl, 0, 15, "deberia", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 15, devTxt, text_color=devTxtC, bgcolor=devBg, text_size=size.small)
+
+    string devTxt2 = buyG2 ? "Comprar" : sellG2 ? "Vender" : buyY2 ? "Comprar" : sellY2 ? "Vender" : "—"
+    color devBg2 = buyG2 or sellG2 ? cGreen : buyY2 or sellY2 ? cYellow : cNeutral
+    color devTxtC2 = (buyY2 or sellY2) and not (buyG2 or sellG2) ? color.black : color.white
+    table.cell(tbl, 0, 16, "deberia2 (MACD línea)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 16, devTxt2, text_color=devTxtC2, bgcolor=devBg2, text_size=size.small)
+
+    string devTxt3 = buyG3 ? "Comprar" : sellG3 ? "Vender" : buyY3 ? "Comprar" : sellY3 ? "Vender" : "—"
+    color devBg3 = buyG3 or sellG3 ? cGreen : buyY3 or sellY3 ? cYellow : cNeutral
+    color devTxtC3 = (buyY3 or sellY3) and not (buyG3 or sellG3) ? color.black : color.white
+    table.cell(tbl, 0, 17, "deberia3 (hist + sesgo)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 17, devTxt3, text_color=devTxtC3, bgcolor=devBg3, text_size=size.small)
+
+    string devTxt4 = buyG4 ? "Comprar" : sellG4 ? "Vender" : buyY4 ? "Comprar" : sellY4 ? "Vender" : "—"
+    color devBg4 = buyG4 or sellG4 ? cGreen : buyY4 or sellY4 ? cYellow : cNeutral
+    color devTxtC4 = (buyY4 or sellY4) and not (buyG4 or sellG4) ? color.black : color.white
+    table.cell(tbl, 0, 18, "deberia4 (MACD línea + sesgo)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 18, devTxt4, text_color=devTxtC4, bgcolor=devBg4, text_size=size.small)
+
+    string devTxt5 = buy5 ? "Comprar" : sell5 ? "Vender" : "—"
+    color devBg5 = buy5 or sell5 ? cGreen : cNeutral
+    table.cell(tbl, 0, 19, "deberia5 (cruce+VWAP+sesgo)", text_color=color.white, text_size=size.small)
+    table.cell(tbl, 1, 19, devTxt5, text_color=color.white, bgcolor=devBg5, text_size=size.small)
