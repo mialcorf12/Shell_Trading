@@ -8,14 +8,20 @@ Interfaz de cada módulo (puro, sin E/S):
 
 * ``ID`` (int), ``NOMBRE`` (str, p. ej. ``"deberia_1_verde"``), ``DESCRIPCION`` (str).
 
-Estrategias actuales (9): deberia_1..deberia_4 en dos módulos cada una, verde
+Estrategias actuales (18): deberia_1..deberia_4 en dos módulos cada una, verde
 (solo buyG) y amarilla (buyY y no buyG), y deberia_5_verde (sin amarillo):
 ``e01_deberia_1_verde`` .. ``e08_deberia_4_amarilla``, ``e09_deberia_5_verde``.
+Ideas de ``00_Nuevas.md`` (solo verde): ``e10_orb``, ``e11_vwap_rebote``,
+``e12_barrida_liquidez``, ``e13_pullback_ema``, ``e14_gap``,
+``e15_premarket_ruptura``, ``e16_delta_divergencia``, ``e17_macd_momentum``,
+``e18_power_hour``. La idea 9 (noticias macro) no se implementa: no hay
+calendario económico en los datos.
 * ``REGLA`` (str): texto de la regla con operadores y umbrales reales (notas).
 * ``senales(ind, incluir_amarillo=True) -> (buy, sell, tier)``: ``bytearray``
   0/1 por vela; ``tier`` 1 verde, 2 amarillo, 0 nada. ``ind`` trae los arrays
   precalculados (rsi, adx, macdL, macdH, volRel, trend, vwapNY, close,
-  macdCrossUp0, macdCrossDn0); los módulos no recalculan indicadores.
+  macdCrossUp0, macdCrossDn0, y las claves perezosas de sesión/5m de
+  ``engine.signals.Indicadores``); los módulos no recalculan indicadores.
 * ``motivo(ind, i, side) -> str``: disparo de la vela ``i`` (``"long"`` o
   ``"short"``) con los valores reales.
 """

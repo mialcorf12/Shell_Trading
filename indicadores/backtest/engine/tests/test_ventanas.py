@@ -175,7 +175,7 @@ def test_periodo_without_trades_is_window_start_to_last_bar(tmp_path):
 def test_default_run_count_is_strategies_configs_contracts_anos(tmp_path):
     data = _segments_file(tmp_path, SEGS)
     ups = run(_args(tmp_path, data, tmp_path / "x.csv", "--no-write"))
-    assert len(ups) == 9 * 6 * 4 * 3
+    assert len(ups) == 18 * 6 * 4 * 3
     assert {u["anos"] for u in ups} == {6, 3, 1}
 
 

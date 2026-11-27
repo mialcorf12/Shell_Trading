@@ -1,6 +1,6 @@
 """Motor de backtest en Python puro (solo stdlib) para las estrategias "deberia".
 
-Replica la lógica de las estrategias deberia (los Pine originales se eliminaron; ver odd/tasks/backtest/backtesting.md, L16)
+Replica la lógica de las estrategias deberia (y desde S13 las de ``00_Nuevas.md``; los Pine originales se eliminaron; ver odd/tasks/backtest/backtesting.md, L16)
 sobre el CSV histórico de 1 minuto (por defecto MNQ, ``data/mnq_1m.csv``) y
 escribe las estadísticas en ``indicadores/backtest/stats/resultados.csv``.
 
@@ -28,8 +28,9 @@ Convenciones (ver también los docstrings de cada módulo):
 
 * Estrategias: un módulo por estrategia en ``engine/estrategias/eNN_<nombre>.py``
   (ID estable = NN). Ver ``engine.estrategias`` para la interfaz.
-  Son 9: deberia_1..deberia_4 en verde (``e01``, ``e03``, ``e05``, ``e07``) y
-  amarilla (``e02``, ``e04``, ``e06``, ``e08``), y ``e09_deberia_5_verde``.
+  Son 18: deberia_1..deberia_4 en verde (``e01``, ``e03``, ``e05``, ``e07``) y
+  amarilla (``e02``, ``e04``, ``e06``, ``e08``), ``e09_deberia_5_verde`` y las
+  ideas de ``00_Nuevas.md`` ``e10_orb`` .. ``e18_power_hour`` (solo verde; ver S13).
 * ``notas`` por corrida: ``#eNN_<NOMBRE>: <REGLA>; verdes V, amarillas A;
   ventana N anos (inicio..fin); <estándar>``
   (V/A = operaciones de esa corrida por nivel de la vela de entrada; una estrategia

@@ -1,7 +1,7 @@
 """CLI: ``python3 -m engine`` desde ``indicadores/backtest/``.
 
-Por defecto corre 9 estrategias x 6 configuraciones x 4 valores de contratos
-x 3 ventanas (``anos`` 6, 3 y 1: 648 corridas; 216 por ventana) del símbolo MNQ
+Por defecto corre 18 estrategias x 6 configuraciones x 4 valores de contratos
+x 3 ventanas (``anos`` 6, 3 y 1: 1296 corridas; 432 por ventana) del símbolo MNQ
 sobre ``data/mnq_1m.csv`` y escribe ``stats/resultados.csv`` (filas por simbolo,
 estrategia, tp, sl, contratos, anos) y
 ``stats/trades/<SIMBOLO>_<estrategia>_tp<tp>_sl<sl>_c<N>_a<anos>.json``.
@@ -19,7 +19,7 @@ estrategia, tp, sl, contratos, anos) y
 
 * ``--limit-bars N``: corrida corta; NO escribe salvo que se pase ``--write``.
 * ``--no-write``: corrida en seco.
-* ``--estrategias 1,3``: subconjunto por ID 1..9 (prefijo ``eNN`` del módulo en
+* ``--estrategias 1,3``: subconjunto por ID 1..18 (prefijo ``eNN`` del módulo en
   ``engine/estrategias/``). Por defecto todas.
 * ``--strategies deberia_1_verde,deberia_5_verde``: subconjunto por nombre.
   Excluyente con ``--estrategias``.
@@ -61,7 +61,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def build_parser():
     p = argparse.ArgumentParser(prog="python3 -m engine",
-                                description="Backtest de las estrategias deberia sobre MNQ/NQ 1m.")
+                                description="Backtest de las estrategias de engine/estrategias sobre MNQ/NQ 1m.")
     p.add_argument("--simbolo", choices=sorted(INSTRUMENTS), default=DEFAULT_SIMBOLO,
                    help="instrumento: valor del punto, tick y comision (por defecto MNQ)")
     p.add_argument("--data", default=None,

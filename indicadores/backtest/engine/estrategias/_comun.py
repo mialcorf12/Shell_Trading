@@ -94,3 +94,48 @@ def motivo_filtro(ind, i):
 def sesgo(ind, i):
     t = ind["trend"][i]
     return "estructura alcista" if t == 1 else ("estructura bajista" if t == -1 else "estructura neutra")
+
+
+# ---------- ayudas de tiempo para e10..e18 (``ind["om"]`` = minuto de APERTURA ET) ----------
+
+def hhmm(h, m=0):
+    """Minuto del día de ``h:m``."""
+    return h * 60 + m
+
+
+def hora(om_i):
+    """Texto ``HH:MM`` (apertura) de un minuto absoluto."""
+    m = om_i % 1440
+    return "%02d:%02d" % (m // 60, m % 60)
+
+
+def inicio_dia(om, i):
+    """Primer índice de la misma fecha (de apertura) que la vela ``i``."""
+    d = om[i] // 1440
+    j = i
+    while j > 0 and om[j - 1] // 1440 == d:
+        j -= 1
+    return j
+
+
+def senales_eventos(n, eventos):
+    """``eventos``: iterable de (i, lado, info) con lado 1 largo / -1 corto.
+    Devuelve (buy, sell, tier) con tier verde en cada señal (largo gana si ambos)."""
+    buy, sell, tier = bytearray(n), bytearray(n), bytearray(n)
+    for i, lado, _info in eventos:
+        if lado == 1:
+            buy[i] = 1
+            sell[i] = 0
+        elif not buy[i]:
+            sell[i] = 1
+        tier[i] = VERDE
+    return buy, sell, tier
+
+
+def evento_en(eventos, i, side):
+    """Info del evento de la vela ``i`` y lado ``side`` (``"long"``/``"short"``) o None."""
+    lado = 1 if side == "long" else -1
+    for j, l, info in eventos:
+        if j == i and l == lado:
+            return info
+    return None

@@ -21,10 +21,11 @@ NI = HEADER.index("notas")
 
 NOMBRES = ("deberia_1_verde", "deberia_1_amarilla", "deberia_2_verde", "deberia_2_amarilla",
            "deberia_3_verde", "deberia_3_amarilla", "deberia_4_verde", "deberia_4_amarilla",
-           "deberia_5_verde")
+           "deberia_5_verde", "orb", "vwap_rebote", "barrida_liquidez", "pullback_ema", "gap",
+           "premarket_ruptura", "delta_divergencia", "macd_momentum", "power_hour")
 
 
-def test_registry_loads_nine_modules_in_id_order():
+def test_registry_loads_all_modules_in_id_order():
     assert [(m.ID, m.NOMBRE) for m in ESTRATEGIAS] == list(enumerate(NOMBRES, 1))
     assert [m.__name__.rsplit(".", 1)[1] for m in ESTRATEGIAS] == [
         "e%02d_%s" % (k, n) for k, n in enumerate(NOMBRES, 1)]
@@ -37,7 +38,7 @@ def test_regla_states_only_its_own_tier():
     for m in ESTRATEGIAS:
         if m.NOMBRE.endswith("_amarilla"):
             assert "(amarillo, sin verde)" in m.REGLA and "(verde)" not in m.REGLA, m.NOMBRE
-        elif m.ID != 9:
+        elif m.ID <= 8:
             assert "(verde)" in m.REGLA and "amarillo" not in m.REGLA, m.NOMBRE
     assert POR_ID[2].REGLA == ("RSI>50, MACD hist>0, ADX>=20 o VolRel>=0.8 (amarillo, sin verde); "
                                "corto: RSI<50, MACD hist<0, mismo filtro")
@@ -308,11 +309,11 @@ def test_cli_estrategias_by_id_and_strategies_by_name(tmp_path, capsys):
     assert {u["estrategia"] for u in ups} == {"deberia_5_verde"}
     assert all(u["notas"].startswith("#e09_deberia_5_verde: estructura alcista") for u in ups)
     ups = run(_args(tmp_path, data, res, "--no-write", "--contratos", "1", "--anos", "6"))
-    assert len(ups) == 9 * 6 and [u["estrategia"] for u in ups[::6]] == list(NOMBRES)
-    for bad in (["--estrategias", "10"], ["--estrategias", "0"], ["--strategies", "deberia_1"]):
+    assert len(ups) == 18 * 6 and [u["estrategia"] for u in ups[::6]] == list(NOMBRES)
+    for bad in (["--estrategias", "19"], ["--estrategias", "0"], ["--strategies", "deberia_1"]):
         with pytest.raises(SystemExit):
             run(_args(tmp_path, data, res, "--no-write", *bad))
     with pytest.raises(SystemExit):
         build_parser().parse_args(["--estrategias", "1", "--strategies", "deberia_1_verde"])
     assert build_parser().parse_args([]).estrategias is None
-    assert "216 corridas" in build_parser().format_help()
+    assert "432 corridas" in " ".join(build_parser().format_help().split())
