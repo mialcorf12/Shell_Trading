@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shell_Trading · Backtest deberia</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#c9d1d9; --strong:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --ok:#3fb950; --bad:#f85149; --warn:#d29922; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font: 13px/1.4 system-ui, sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; color:var(--strong); margin:0 12px 0 0; }
+  select, button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:5px; padding:5px 9px; }
+  main { padding:14px 18px; }
+  .note { color:var(--muted); margin:0 0 12px; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); }
+  th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th { color:var(--strong); background:#1c2330; position:sticky; top:0; }
+  th[data-tip] { position:sticky; }
+  th[data-tip]::after { content:attr(data-tip); position:absolute; top:100%; left:0; z-index:20; width:280px; padding:8px 10px; margin-top:4px; background:#0d1117; color:var(--text); border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.45); font:12px/1.4 system-ui, sans-serif; font-weight:400; text-align:left; white-space:normal; opacity:0; pointer-events:none; transition:opacity .12s; }
+  th[data-tip]:hover::after { opacity:1; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--accent); }
+  th .arrow { color:var(--accent); margin-left:4px; }
+  td.l, th.l { text-align:left; }
+  .v-aprueba { color:var(--ok); font-weight:600; }
+  .v-descarta { color:var(--bad); font-weight:600; }
+  .v-incompleto { color:var(--warn); font-weight:600; }
+  .v-pendiente { color:var(--muted); }
+  .chk-ok { color:var(--ok); } .chk-no { color:var(--bad); } .chk-na { color:var(--muted); }
+  #status { color:var(--muted); margin-top:10px; }
+  details#recomendadas { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin:0 0 14px; }
+  details#recomendadas > summary { cursor:pointer; color:var(--strong); font-weight:600; font-size:14px; }
+  .rec-controls { margin:10px 0; display:flex; gap:12px; align-items:center; }
+  .rec-group h3 { font-size:13px; color:var(--strong); margin:14px 0 6px; }
+  table.rec th { position:relative; top:auto; }
+  .rec-empty { color:var(--muted); margin:4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Backtest · estrategias deberia</h1>
+  <label>Estrategia
+    <select id="f-strategy"><option value="">todas</option></select>
+  </label>
+  <label>Símbolo
+    <select id="f-symbol">
+      <option value="">todos</option>
+      <option value="MNQ">MNQ</option>
+    </select>
+  </label>
+  <label>Años
+    <select id="f-anos">
+      <option value="">todos</option>
+      <option value="1">1</option>
+      <option value="3">3</option>
+      <option value="6">6</option>
+    </select>
+  </label>
+  <label>Contratos
+    <select id="f-contracts">
+      <option value="">todos</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+  </label>
+  <label>TP
+    <select id="f-tp">
+      <option value="">todos</option>
+      <option value="100">$100</option>
+      <option value="200">$200</option>
+      <option value="300">$300</option>
+      <option value="600">$600</option>
+      <option value="1000">$1000</option>
+      <option value="1500">$1500</option>
+    </select>
+  </label>
+  <label>Veredicto
+    <select id="f-verdict">
+      <option value="">todos</option>
+      <option value="aprueba">aprueba</option>
+      <option value="descarta">descarta</option>
+      <option value="incompleto">incompleto</option>
+      <option value="pendiente">pendiente</option>
+    </select>
+  </label>
+  <button id="reload">Recargar</button>
+</header>
+<main>
+  <details id="recomendadas">
+    <summary>Estrategias recomendadas</summary>
+    <p class="note">Top 5 por TP. Grupo = estrategia + SL + contratos con las tres ventanas (6, 3 y 1 años). Orden: ventanas que aprueban, ventanas con neto positivo, PF mínimo y Sharpe mínimo (mayor primero). El selector solo cambia la ventana de las columnas de detalle, no el orden.</p>
+    <div class="rec-controls">
+      <label>Años para detalle
+        <select id="rec-anos">
+          <option value="1">1</option>
+          <option value="3">3</option>
+          <option value="6" selected>6</option>
+        </select>
+      </label>
+      <span id="rec-status" class="note"></span>
+    </div>
+    <div id="rec-groups"></div>
+  </details>
+  <p class="note">Fuente: <code>indicadores/backtest/stats/resultados.csv</code>. Umbrales de <code>odd/tasks/indicadores/backtest/checklist.md</code>. TP/SL en USD totales de la operacion; con N contratos la distancia en puntos se divide entre N y el PnL y la comision escalan por N. "Top 3" ≤ 50% es un supuesto propio. Las corridas sin datos figuran como pendiente.</p>
+  <table id="results">
+    <thead>
+      <tr>
+        <th class="l" data-tip="Nombre de la estrategia deberia (1 a 5). Cada una es una señal distinta: histograma o línea MACD, con o sin sesgo de estructura.">Estrategia</th><th class="l" data-tip="Instrumento de la corrida. Aquí solo MNQ.">Símbolo</th><th class="sortable" data-key="anos" data-tip="Años de historial usados en la corrida: 6 = completo, 3 y 1 = últimos años hasta la última vela. Los indicadores usan toda la historia para calentarse.">Años</th><th class="sortable" data-key="contratos" data-tip="Número de contratos por operación (1 a 4). TP y SL son el monto total: al subir los contratos, la distancia en puntos se reduce. Neto, comisión y drawdown escalan por N.">Contratos</th><th class="sortable" data-key="tp_usd" data-tip="Ganancia objetivo total de la operación en USD, antes de costos.">TP $</th><th class="sortable" data-key="sl_usd" data-tip="Pérdida máxima total de la operación en USD, antes de costos y slippage.">SL $</th><th class="sortable" data-key="trades" data-tip="Operaciones cerradas. Checklist: al menos 100 para que las métricas tengan peso estadístico.">Trades</th><th class="sortable" data-key="win_rate_pct" data-tip="Porcentaje de operaciones ganadoras. Leela junto con el Payoff: un win rate alto no sirve si el payoff es bajo.">Win %</th>
+        <th class="sortable" data-key="payoff" data-tip="Ganancia promedio dividida por pérdida promedio. El win rate mínimo para no perder es 1 / (1 + payoff).">Payoff</th><th class="sortable" data-key="profit_factor" data-tip="Profit factor: ganancia bruta / pérdida bruta. Checklist: piso 1.25; 1.5 o más con costos realistas.">PF</th><th class="sortable" data-key="expectancy_usd" data-tip="Resultado promedio por operación después de costos. Debe ser positivo; checklist: positivo de forma clara.">Expectancy $</th><th class="sortable" data-key="net_profit_usd" data-tip="Resultado neto del periodo después de comisiones y slippage. Checklist: positivo.">Net $</th><th class="sortable" data-key="max_dd_usd" data-tip="Máxima caída de la curva de equidad, desde un pico hasta el valle siguiente. Mide el peor golpe histórico.">MDD $</th>
+        <th class="sortable" data-key="max_consec_losses" data-tip="Máximo de operaciones perdedoras seguidas. Sirve para medir el aguante y la exposición.">Racha pérd.</th><th class="sortable" data-key="sharpe" data-tip="Retorno ajustado por volatilidad total. Checklist: 1.0 o más. Diario, aproximado.">Sharpe</th><th class="sortable" data-key="sortino" data-tip="Como Sharpe, pero solo penaliza la volatilidad a la baja. Diario, aproximado.">Sortino</th><th class="sortable" data-key="top3_pct" data-tip="Porcentaje del neto que explican las 3 mejores operaciones. Supuesto propio: 50% o menos; si el neto es negativo queda vacío.">Top3 %</th><th class="sortable l" data-key="veredicto" data-tip="aprueba: cumple todos los umbrales. descarta: no cumple alguno. incompleto: falta un dato. pendiente: sin corrida cargada.">Veredicto</th><th class="l" data-tip="Texto de la corrida: fills, prioridad SL, comisión y supuestos.">Notas</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p id="status"></p>
+</main>
+  <template id="rec-table">
+    <table class="rec">
+      <thead class="rec-head">
+        <tr>
+          <th class="l" data-tip="Nombre de la estrategia deberia (1 a 5). Cada una es una señal distinta: histograma o línea MACD, con o sin sesgo de estructura.">Estrategia</th><th data-tip="Pérdida máxima total de la operación en USD, antes de costos y slippage.">SL $</th><th data-tip="Número de contratos por operación (1 a 4). TP y SL son el monto total: al subir los contratos, la distancia en puntos se reduce. Neto, comisión y drawdown escalan por N.">Contratos</th><th data-tip="Número de ventanas (6, 3 y 1 años) donde el veredicto es aprueba">Aprueba (de 3años)</th><th data-tip="Resultado neto con 6 años de historial (completo), después de comisiones y slippage.">Neto 6a $</th><th data-tip="Resultado neto de los últimos 3 años, después de comisiones y slippage.">Neto 3a $</th><th data-tip="Resultado neto del último año, después de comisiones y slippage.">Neto 1a $</th>
+          <th data-tip="Profit factor: ganancia bruta / pérdida bruta. Checklist: piso 1.25; 1.5 o más con costos realistas.">PF</th><th data-tip="Resultado promedio por operación después de costos. Debe ser positivo; checklist: positivo de forma clara.">Expectancy $</th><th data-tip="Resultado neto del periodo después de comisiones y slippage. Checklist: positivo.">Net $</th><th data-tip="Máximo de operaciones perdedoras seguidas. Sirve para medir el aguante y la exposición.">Racha pérd.</th><th data-tip="Retorno ajustado por volatilidad total. Checklist: 1.0 o más. Diario, aproximado.">Sharpe</th><th data-tip="Porcentaje del neto que explican las 3 mejores operaciones. Supuesto propio: 50% o menos; si el neto es negativo queda vacío.">Top3 %</th><th class="l" data-tip="aprueba: cumple todos los umbrales. descarta: no cumple alguno. incompleto: falta un dato. pendiente: sin corrida cargada.">Veredicto</th><th data-tip="Porcentaje de operaciones ganadoras. Leela junto con el Payoff: un win rate alto no sirve si el payoff es bajo.">Win %</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </template>
+<script src="/static/app.js"></script>
+</body>
+</html>

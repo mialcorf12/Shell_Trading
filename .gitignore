@@ -1,6 +1,8 @@
-/.DS_Store
+*.DS_Store
 __pycache__
 .atl
 .pytest_cache
 .gitkeep
 /jira/cookies.txt
+/indicadores/backtest/data/mnq_1m.*
+/indicadores/backtest/stats/trades
